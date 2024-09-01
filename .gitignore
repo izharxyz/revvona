@@ -1,0 +1,52 @@
+# Python-related
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# Django-related
+*.log
+*.pot
+*.pyc
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+static/
+
+# Ignore the local environment and IDE settings
+.env
+.venv/
+ENV/
+env/
+venv/
+
+# VSCode settings
+.vscode/
+
+# macOS files
+.DS_Store
+
+# Linux trash files
+.Trash-*
+
+# Node modules (if using npm/yarn)
+node_modules/
+npm-debug.log
+
+# Pytest cache
+.pytest_cache/
+test-results/
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.cache/
+
+# Celery beat schedule file
+celerybeat-schedule
