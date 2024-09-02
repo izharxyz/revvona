@@ -76,3 +76,62 @@ class UserRegisterView(APIView):
         )
 
         return response
+
+
+# login user (customizing it so that we can see fields like username, email etc as a response
+# from server, otherwise it will only provide access and refresh token)
+
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+
+    def validate(self, attrs):
+        try:
+            # Call the parent class validate to get token data
+            data = super().validate(attrs)
+
+            # Fetch additional user data
+            user_data = UserRegisterTokenSerializer(self.user).data
+
+            # Merge user data into the token response
+            data.update(user_data)
+
+            return data
+
+        except AuthenticationFailed:
+            # Custom error message on failed login
+            raise AuthenticationFailed(
+                detail="Invalid credentials, please try again.")
+
+
+class UserLoginView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        # Get the token response
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            data = response.data
+            access_token = data.get('access')
+            refresh_token = data.get('refresh')
+
+            # Set cookies
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],  # e.g. 'access_token'
+                value=access_token,
+                expires=timedelta(days=1),  # Adjust expiration if necessary
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+                samesite='Lax'
+            )
+
+            response.set_cookie(
+                # e.g. 'refresh_token'
+                key=settings.SIMPLE_JWT['REFRESH_COOKIE'],
+                value=refresh_token,
+                expires=timedelta(days=7),
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+                samesite='Lax'
+            )
+
+        return response
