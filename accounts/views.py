@@ -135,3 +135,17 @@ class UserLoginView(TokenObtainPairView):
             )
 
         return response
+
+
+class UserLogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        response = Response({"detail": "Logout successful."},
+                            status=status.HTTP_200_OK)
+
+        # Clear the cookies
+        response.delete_cookie(settings.SIMPLE_JWT['AUTH_COOKIE'])
+        response.delete_cookie(settings.SIMPLE_JWT['REFRESH_COOKIE'])
+
+        return response
