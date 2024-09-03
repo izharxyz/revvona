@@ -163,3 +163,28 @@ class UserProfileView(APIView):
 
         except:
             return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+# update user account
+class UserProfileUpdateView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        data = request.data
+
+        if user:
+            user.username = data["username"]
+            user.email = data["email"]
+
+            if data["password"] != "":
+                user.password = make_password(data["password"])
+
+            user.save()
+            serializer = UserSerializer(user, many=False)
+            message = {"detail": "User Successfully Updated.",
+                       "user": serializer.data}
+            return Response(message, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
