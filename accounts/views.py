@@ -149,3 +149,17 @@ class UserLogoutView(APIView):
         response.delete_cookie(settings.SIMPLE_JWT['REFRESH_COOKIE'])
 
         return response
+
+
+class UserProfileView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        try:
+            user = request.user
+            serializer = UserSerializer(user, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except:
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
