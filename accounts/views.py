@@ -188,3 +188,24 @@ class UserProfileUpdateView(APIView):
             return Response(message, status=status.HTTP_200_OK)
         else:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+# delete user account
+class UserAccountDeleteView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+
+        try:
+            user = request.user
+            data = request.data
+
+            if check_password(data["password"], user.password):
+                user.delete()
+                return Response({"detail": "User successfully deleted."}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"detail": "Incorrect password."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        except:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
