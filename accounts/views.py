@@ -209,3 +209,27 @@ class UserAccountDeleteView(APIView):
 
         except:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+# get billing address (details of user address, all addresses)
+class UserAddressesListView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        user_address = Address.objects.filter(user=user)
+        serializer = AddressSerializer(user_address, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# get specific address only
+class UserAddressDetailsView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        user_address = Address.objects.get(id=pk)
+        serializer = AddressSerializer(user_address, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
