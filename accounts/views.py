@@ -233,3 +233,67 @@ class UserAddressDetailsView(APIView):
         user_address = Address.objects.get(id=pk)
         serializer = AddressSerializer(user_address, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# create billing address
+class CreateUserAddressView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+
+        new_address = {
+            "name": data["name"],
+            "user": request.user.id,
+            "phone_number": data["phone_number"],
+            "pin_code": data["pin_code"],
+            "house_no": data["house_no"],
+            "landmark": data["landmark"],
+            "city": data["city"],
+            "state": data["state"],
+        }
+
+        serializer = AddressSerializer(data=new_address, many=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# edit billing address
+class UpdateUserAddressView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, pk):
+        data = request.data
+
+        try:
+            user_address = Address.objects.get(id=pk)
+
+            if request.user.id == user_address.user.id:
+
+                updated_address = {
+                    "name": data["name"] if data["name"] else user_address.name,
+                    "user": request.user.id,
+                    "phone_number": data["phone_number"] if data["phone_number"] else user_address.phone_number,
+                    "pin_code": data["pin_code"] if data["pin_code"] else user_address.pin_code,
+                    "house_no": data["house_no"] if data["house_no"] else user_address.house_no,
+                    "landmark": data["landmark"] if data["landmark"] else user_address.landmark,
+                    "city": data["city"] if data["city"] else user_address.city,
+                    "state": data["state"] if data["state"] else user_address.state,
+                }
+
+                serializer = AddressSerializer(
+                    user_address, data=updated_address)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+        except:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
