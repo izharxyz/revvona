@@ -297,3 +297,22 @@ class UpdateUserAddressView(APIView):
                 return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         except:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+# delete address
+class DeleteUserAddressView(APIView):
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk):
+
+        try:
+            user_address = Address.objects.get(id=pk)
+
+            if request.user.id == user_address.user.id:
+                user_address.delete()
+                return Response({"detail": "Address successfully deleted."}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+        except:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
