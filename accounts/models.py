@@ -16,8 +16,8 @@ class Address(models.Model):
     city = models.CharField(max_length=120, null=False, blank=False)
     state = models.CharField(max_length=120, null=False, blank=False)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
         return self.name
