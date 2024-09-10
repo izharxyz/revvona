@@ -20,9 +20,8 @@ class CartView(generics.RetrieveAPIView):
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
+
 # Add an item to the cart
-
-
 class AddToCartView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CartItemSerializer
@@ -43,9 +42,8 @@ class AddToCartView(generics.CreateAPIView):
         self.perform_create(serializer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
 # Update the quantity of an item in the cart
-
-
 class UpdateCartItemView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CartItemSerializer
@@ -53,11 +51,36 @@ class UpdateCartItemView(generics.UpdateAPIView):
     def get_queryset(self):
         return CartItem.objects.filter(cart__user=self.request.user)
 
+
 # Remove an item from the cart
-
-
 class RemoveCartItemView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return CartItem.objects.filter(cart__user=self.request.user)
+
+
+# View cart items
+class CartItemListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CartItemSerializer
+
+    def get_queryset(self):
+        cart = Cart.objects.filter(user=self.request.user).first()
+        if cart:
+            return CartItem.objects.filter(cart=cart)
+        return CartItem.objects.none()  # Return an empty queryset if no cart is found
+
+
+class ClearCartView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        # Get the user's cart
+        try:
+            cart = Cart.objects.get(user=request.user)
+            # Delete all cart items
+            CartItem.objects.filter(cart=cart).delete()
+            return Response({"detail": "Cart cleared successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Cart.DoesNotExist:
+            return Response({"detail": "Cart does not exist."}, status=status.HTTP_404_NOT_FOUND)
