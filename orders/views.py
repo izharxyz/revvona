@@ -55,3 +55,34 @@ class OrderCreateView(generics.CreateAPIView):
 
         serializer = self.get_serializer(order)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class OrderDetailView(generics.RetrieveAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    # Only authenticated users can view order details
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # User can only view their own orders
+        return Order.objects.filter(user=self.request.user)
+
+
+class OrderListView(generics.ListAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    # Only authenticated users can view their orders
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # User can only view their own orders
+        return Order.objects.filter(user=self.request.user)
+
+
+class OrderUpdateView(generics.UpdateAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
