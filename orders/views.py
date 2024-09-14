@@ -123,3 +123,13 @@ class PaymentCreateView(generics.CreateAPIView):
 
         serializer = self.get_serializer(payment)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class PaymentDetailView(generics.RetrieveAPIView):
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # User can only view their own payments
+        return Payment.objects.filter(order__user=self.request.user)
