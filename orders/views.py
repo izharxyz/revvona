@@ -86,3 +86,40 @@ class OrderUpdateView(generics.UpdateAPIView):
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
+
+
+# Payment Views
+
+
+class PaymentCreateView(generics.CreateAPIView):
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        order_id = request.data.get('order')
+
+        try:
+            order = Order.objects.get(id=order_id, user=user)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found or unauthorized'}, status=status.HTTP_404_NOT_FOUND)
+
+        if Payment.objects.filter(order=order).exists():
+            return Response({'error': 'Payment already exists for this order'}, status=status.HTTP_400_BAD_REQUEST)
+
+        amount = order.total_price
+        payment_method = request.data.get('method')
+
+        payment = Payment.objects.create(
+            order=order,
+            method='cod',  # razorpay will be used in the future
+            amount=amount,
+        )
+
+        # Update order status after successful payment (assuming automatic completion for demo)
+        order.status = 'confirmed'
+        order.save()
+
+        serializer = self.get_serializer(payment)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
