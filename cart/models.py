@@ -5,8 +5,8 @@ from products.models import Product
 
 
 class Cart(models.Model):
-    user = models.ForeignKey(User, related_name='cart',
-                             on_delete=models.CASCADE, null=True, blank=True)
+    user = models.OneToOneField(User, related_name='cart',
+                                on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
