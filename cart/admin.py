@@ -17,14 +17,5 @@ class CartAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')
 
 
-class CartItemAdmin(admin.ModelAdmin):
-    list_display = ('cart', 'product', 'quantity')
-    list_filter = ('cart__user', 'product')  # Filter by user and product
-    search_fields = ('product__name',)  # Search by product name
-    # Makes cart and product read-only in admin
-    readonly_fields = ('cart', 'product')
-
-
 # Register models with admin site
 admin.site.register(Cart, CartAdmin)
-admin.site.register(CartItem, CartItemAdmin)
