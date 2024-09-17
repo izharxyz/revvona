@@ -6,6 +6,7 @@ from .models import Order, OrderItem, Payment
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0  # Number of empty forms to display
+    can_delete = True  # Allow deletion of order items in admin
 
 
 class OrderAdmin(admin.ModelAdmin):
