@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import (OrderCreateView, OrderDetailView, OrderListView,
-                    PaymentCreateView, PaymentDetailView)
+                    PaymentCreateView, PaymentDetailView, PaymentVerifyView)
 
 urlpatterns = [
     # List all orders for the authenticated user
@@ -11,6 +11,7 @@ urlpatterns = [
 
     # Payment views
     path('payment/create/', PaymentCreateView.as_view(), name='payment-create'),
+    path('payment/verify/', PaymentVerifyView.as_view(), name='payment-verify'),
     path('<int:order_id>/payment/',
          PaymentDetailView.as_view(), name='payment-detail'),
 ]

@@ -48,11 +48,10 @@ class OrderItem(models.Model):
 
 
 class Payment(models.Model):
-    PAYMENT_METHOD_CHOICES = [
+    PAYMENT_METHOD_CHOICES = (
         ('cod', 'Cash on Delivery'),
-        ('card', 'Credit/Debit Card'),
-        ('upi', 'UPI'),
-    ]
+        ('razorpay', 'Razorpay'),
+    )
 
     PAYMENT_STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -64,6 +63,15 @@ class Payment(models.Model):
         Order, related_name='payment', on_delete=models.CASCADE)
     method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Razorpay payment details
+    razorpay_order_id = models.CharField(
+        max_length=255, blank=True, null=True)
+    razorpay_payment_id = models.CharField(
+        max_length=255, blank=True, null=True)
+    razorpay_signature = models.CharField(
+        max_length=255, blank=True, null=True)
+
     payment_status = models.CharField(
         max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)

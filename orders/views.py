@@ -1,3 +1,5 @@
+import razorpay
+from django.conf import settings
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -35,24 +37,32 @@ class OrderCreateView(generics.CreateAPIView):
         except Address.DoesNotExist:
             return Response({'detail': 'Invalid address'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Calculate total price of all cart items
+        total_price = 0
+        for item in cart_items:
+            total_price += item.product.price * item.quantity
+
+        # Create the order
         order = Order.objects.create(
             user=user,
             shipping_address=shipping_address,
             billing_address=billing_address,
-            # total_price is nullable, and will be calculated via signals
+            total_price=total_price,
         )
 
+        # Create order items and assign prices
         for item in cart_items:
             OrderItem.objects.create(
                 order=order,
                 product=item.product,
                 quantity=item.quantity,
-                # price is nullable, so it will be calculated on save()
+                price=item.product.price * item.quantity
             )
 
-        # Clear the user's cart
+        # Clear the user's cart after the order is created
         cart_items.delete()
 
+        # Serialize the order and return the response
         serializer = self.get_serializer(order)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -99,6 +109,7 @@ class PaymentCreateView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         user = request.user
         order_id = request.data.get('order')
+        payment_method = request.data.get('method')
 
         try:
             order = Order.objects.get(id=order_id, user=user)
@@ -109,20 +120,90 @@ class PaymentCreateView(generics.CreateAPIView):
             return Response({'detail': 'Payment already exists for this order'}, status=status.HTTP_400_BAD_REQUEST)
 
         amount = order.total_price
-        payment_method = request.data.get('method')
 
-        payment = Payment.objects.create(
-            order=order,
-            method='cod',  # razorpay will be used in the future
-            amount=amount,
-        )
+        # If payment method is Cash on Delivery (COD)
+        if payment_method == 'cod':
+            payment = Payment.objects.create(
+                order=order,
+                method='cod',
+                amount=amount,
+            )
+            # Mark the order as confirmed for COD
+            order.status = 'confirmed'
+            order.save()
 
-        # Update order status after successful payment (assuming automatic completion for demo)
-        order.status = 'confirmed'
-        order.save()
+            serializer = self.get_serializer(payment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        serializer = self.get_serializer(payment)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # If payment method is Razorpay
+        elif payment_method == 'razorpay':
+            client = razorpay.Client(
+                auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
+
+            # Create a Razorpay order
+            razorpay_order = client.order.create({
+                # Razorpay expects amount in paise
+                'amount': int(amount) * 100,
+                'currency': 'INR',
+                'payment_capture': 1  # auto-capture payment
+            })
+
+            payment = Payment.objects.create(
+                order=order,
+                method='razorpay',
+                amount=amount,
+                # Store Razorpay order ID
+                razorpay_order_id=razorpay_order['id'],
+            )
+
+            serializer = self.get_serializer(payment)
+            return Response({
+                'payment': serializer.data,
+                'razorpay_order_id': razorpay_order['id'],
+                'amount': amount
+            }, status=status.HTTP_201_CREATED)
+
+        return Response({'detail': 'Invalid payment method'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PaymentVerifyView(generics.UpdateAPIView):
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        razorpay_order_id = request.data.get('razorpay_order_id')
+        razorpay_payment_id = request.data.get('razorpay_payment_id')
+        razorpay_signature = request.data.get('razorpay_signature')
+
+        try:
+            payment = Payment.objects.get(
+                razorpay_order_id=razorpay_order_id, order__user=request.user)
+        except Payment.DoesNotExist:
+            return Response({'detail': 'Payment not found or unauthorized'}, status=status.HTTP_404_NOT_FOUND)
+
+        client = razorpay.Client(
+            auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
+
+        # Verify the payment signature
+        try:
+            client.utility.verify_payment_signature({
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature,
+            })
+        except razorpay.errors.SignatureVerificationError:
+            return Response({'detail': 'Payment signature verification failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # If verification succeeds, mark the payment as complete
+        payment.razorpay_payment_id = razorpay_payment_id
+        payment.razorpay_signature = razorpay_signature
+        payment.status = 'confirmed'
+        payment.save()
+
+        payment.order.status = 'confirmed'
+        payment.order.save()
+
+        return Response({'detail': 'Payment successful'}, status=status.HTTP_200_OK)
 
 
 class PaymentDetailView(generics.RetrieveAPIView):
