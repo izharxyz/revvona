@@ -2,14 +2,21 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-nia*2@^$okrbx+7ak33k3a)ul6!mzt$%pwm#k$_k)@e65pvsx5'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+if os.getenv('ENVIRONMENT') == 'PROD':
+    DEBUG = False
+else:
+    DEBUG = True
+
+ALLOWED_HOSTS = [os.getenv('ALLOWED_HOST'), '.vercel.app']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -61,8 +68,15 @@ WSGI_APPLICATION = 'agavi.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django_cockroachdb',
+        'NAME': os.getenv('COCKROACH_DB_NAME'),
+        'USER': os.getenv('COCKROACH_DB_USER'),
+        'PASSWORD': os.getenv('COCKROACH_DB_PASS'),
+        'HOST': os.getenv('COCKROACH_DB_HOST'),
+        'PORT': os.getenv('COCKROACH_DB_PORT'),
+        'OPTIONS': {
+            'sslmode': 'require',
+        },
     }
 }
 
