@@ -1,0 +1,23 @@
+{
+    "regions": ["bom1"],
+    "builds": [
+        {
+            "src": "agavi/wsgi.py",
+            "use": "@vercel/python",
+            "config": { "maxLambdaSize": "15mb", "runtime": "python3.9" }
+        },
+        {
+            "src": "build.sh",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "./staticfiles"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "agavi/wsgi.py"
+        }
+    ]
+}
