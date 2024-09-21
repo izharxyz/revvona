@@ -8,7 +8,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-nia*2@^$okrbx+7ak33k3a)ul6!mzt$%pwm#k$_k)@e65pvsx5'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 
 if os.getenv('ENVIRONMENT') == 'PROD':
@@ -124,8 +124,11 @@ SIMPLE_JWT = {
     # Cookie settings for access and refresh tokens
     'AUTH_COOKIE': 'access_token',  # Name of the access token cookie
     'REFRESH_COOKIE': 'refresh_token',  # Name of the refresh token cookie
-    'AUTH_COOKIE_SECURE': False,  # Set to True in production (use HTTPS)
-    'REFRESH_COOKIE_SECURE': False,  # Set to True in production (use HTTPS)
+
+    # Set to True in production (use HTTPS)
+    'AUTH_COOKIE_SECURE': True if os.getenv('ENVIRONMENT') == 'PROD' else False,
+    # Set to True in production (use HTTPS)
+    'REFRESH_COOKIE_SECURE': True if os.getenv('ENVIRONMENT') == 'PROD' else False,
 
     # Default token type in the Authorization header
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -148,8 +151,9 @@ SIMPLE_JWT = {
 
 
 # # Enable CSRF protection
-# CSRF_COOKIE_SECURE = True  # In production
-# SESSION_COOKIE_SECURE = True  # In production
+if os.getenv('ENVIRONMENT') == 'PROD':
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
