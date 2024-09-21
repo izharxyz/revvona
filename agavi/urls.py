@@ -1,9 +1,11 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import include, path
 
 urlpatterns = [
+    path('', lambda request: HttpResponse('Welcome to Agavi API')),
     path('admin/', admin.site.urls),
     path('api/v1/', include('products.urls')),
     path('api/v1/account/', include('accounts.urls')),
