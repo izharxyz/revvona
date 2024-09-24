@@ -27,9 +27,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'cloudinary_storage',
+    'cloudinary',
+
     'rest_framework',
     'corsheaders',
-    'storages',
 
     'accounts',
     'products',
@@ -128,9 +130,9 @@ SIMPLE_JWT = {
     'REFRESH_COOKIE': 'refresh_token',  # Name of the refresh token cookie
 
     # Set to True in production (use HTTPS)
-    'AUTH_COOKIE_SECURE': True if os.getenv('ENV') == 'PROD' else False,
+    'AUTH_COOKIE_SECURE': False if DEBUG else True,
     # Set to True in production (use HTTPS)
-    'REFRESH_COOKIE_SECURE': True if os.getenv('ENV') == 'PROD' else False,
+    'REFRESH_COOKIE_SECURE': False if DEBUG else True,
 
     # Default token type in the Authorization header
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -167,22 +169,16 @@ REST_FRAMEWORK = {
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-MEDIA_URL = os.getenv('MEDIA_URL')
+MEDIA_URL = '/media/'
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+}
 
-# S3 / Cloudflare R2 Configurations
-AWS_ACCESS_KEY_ID = os.getenv('R2_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('R2_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = os.getenv('R2_BUCKET_NAME')
-AWS_S3_ENDPOINT_URL = os.getenv('R2_ENDPOINT_URL')
-AWS_S3_SIGNATURE_VERSION = 's3v4'
-AWS_S3_REGION_NAME = 'auto'
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None
-AWS_QUERYSTRING_AUTH = False
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

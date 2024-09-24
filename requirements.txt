@@ -1,8 +1,6 @@
 asgiref==3.8.1
 atomicwrites==1.4.1
 attrs==24.2.0
-boto3==1.35.27
-botocore==1.35.27
 certifi==2024.8.30
 chardet==5.2.0
 charset-normalizer==3.3.2
@@ -10,13 +8,11 @@ colorama==0.4.6
 Django==5.0
 django-cockroachdb==5.0
 django-cors-headers==4.4.0
-django-storages==1.14.4
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 exceptiongroup==1.2.2
 idna==3.10
 iniconfig==2.0.0
-jmespath==1.0.1
 packaging==24.1
 pillow==10.4.0
 pluggy==1.5.0
@@ -25,14 +21,11 @@ py==1.11.0
 PyJWT==2.9.0
 pyparsing==3.1.4
 pytest==8.3.3
-python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2024.2
 razorpay==1.4.2
 requests==2.32.3
-s3transfer==0.10.2
 setuptools==75.1.0
-six==1.16.0
 sqlparse==0.5.1
 toml==0.10.2
 tomli==2.0.1
