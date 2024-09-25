@@ -1,15 +1,16 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Order, OrderItem, Payment
 
 
-class OrderItemInline(admin.TabularInline):
+class OrderItemInline(TabularInline):
     model = OrderItem
     extra = 0  # Number of empty forms to display
     can_delete = True  # Allow deletion of order items in admin
 
 
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ModelAdmin):
     list_display = ('id', 'user', 'total_price', 'shipping_address',
                     'billing_address', 'status', 'created_at', 'updated_at')
     list_filter = ('status', 'created_at', 'updated_at')
@@ -28,7 +29,7 @@ class OrderAdmin(admin.ModelAdmin):
     )
 
 
-class PaymentAdmin(admin.ModelAdmin):
+class PaymentAdmin(ModelAdmin):
     list_display = ('id', 'order', 'method', 'amount',
                     'payment_status', 'created_at')
     list_filter = ('method', 'payment_status', 'created_at')

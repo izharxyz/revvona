@@ -2,6 +2,9 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.templatetags.static import static
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +23,11 @@ ALLOWED_HOSTS = [os.getenv('ALLOWED_HOST'),
                  '.cloudflarestorage.com', '.vercel.app']
 
 INSTALLED_APPS = [
+    'unfold',
+    'unfold.contrib.filters',
+    'unfold.contrib.forms',
+    'unfold.contrib.inlines',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -183,3 +191,108 @@ CLOUDINARY_STORAGE = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+UNFOLD = {
+    "SITE_TITLE": "AGAVI ADMIN",
+    "SITE_HEADER": "AGAVI ADMINISTRATION",
+    "SITE_URL": "https://agavi.in",
+    # "SITE_ICON": lambda request: static("icon.svg"),  # both modes, optimise for 32px height
+    "SITE_ICON": {
+        "light": lambda request: static("icon-light.svg"),  # light mode
+        "dark": lambda request: static("icon-dark.svg"),  # dark mode
+    },
+    # "SITE_LOGO": lambda request: static("logo.svg"),  # both modes, optimise for 32px height
+    "SITE_LOGO": {
+        "light": lambda request: static("logo-light.svg"),  # light mode
+        "dark": lambda request: static("logo-dark.svg"),  # dark mode
+    },
+    "SITE_SYMBOL": "speed",  # symbol from icon set
+    "SITE_FAVICONS": [
+        {
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/svg+xml",
+            "href": lambda request: static("favicon.svg"),
+        },
+    ],
+    "SHOW_HISTORY": True,  # show/hide "History" button, default: True
+    "SHOW_VIEW_ON_SITE": True,  # show/hide "View on site" button, default: True
+    "COLORS": {
+        "font": {
+            "subtle-light": "107 114 128",
+            "subtle-dark": "156 163 175",
+            "default-light": "75 85 99",
+            "default-dark": "209 213 219",
+            "important-light": "17 24 39",
+            "important-dark": "243 244 246",
+        },
+        # lime color scheme
+        "primary": {
+            "50": "247 254 231",
+            "100": "236 252 203",
+            "200": "217 249 157",
+            "300": "190 242 100",
+            "400": "163 230 53",
+            "500": "132 204 22",
+            "600": "101 163 13",
+            "700": "77 124 15",
+            "800": "63 98 18",
+            "900": "54 83 20",
+            "950": "26 46 5",
+        },
+    },
+
+    "SIDEBAR": {
+        "show_search": True,  # Search in applications and models names
+        "show_all_applications": False,  # Dropdown with all applications and models
+        "navigation": [
+            {
+                "title": _("Navigation"),
+                "separator": True,  # Top border
+                "collapsible": True,  # Collapsible group of links
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",  # Supported icon set: https://fonts.google.com/icons
+                        "link": reverse_lazy("admin:index"),
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Users"),
+                        "icon": "people",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+
+                    {
+                        "title": _("User Addresses"),
+                        "icon": "location_on",
+                        "link": reverse_lazy("admin:accounts_address_changelist"),
+                    },
+                    {
+                        "title": _("Products"),
+                        "icon": "store",
+                        "link": reverse_lazy("admin:products_product_changelist"),
+                    },
+
+                    {
+                        "title": _("Categories"),
+                        "icon": "category",
+                        "link": reverse_lazy("admin:products_category_changelist"),
+                    },
+
+                    {
+                        "title": _("Carts"),
+                        "icon": "shopping_cart",
+                        "link": reverse_lazy("admin:cart_cart_changelist"),
+                    },
+                    {
+                        "title": _("Orders and Payments"),
+                        "icon": "shopping_bag",
+                        "link": reverse_lazy("admin:app_list", kwargs={"app_label": "orders"}),
+                    },
+                ],
+            },
+        ],
+    },
+}
