@@ -191,12 +191,14 @@ class PaymentVerifyView(generics.UpdateAPIView):
                 'razorpay_signature': razorpay_signature,
             })
         except razorpay.errors.SignatureVerificationError:
+            payment.status = 'failed'
+            payment.save()
             return Response({'detail': 'Payment signature verification failed'}, status=status.HTTP_400_BAD_REQUEST)
 
         # If verification succeeds, mark the payment as complete
         payment.razorpay_payment_id = razorpay_payment_id
         payment.razorpay_signature = razorpay_signature
-        payment.status = 'confirmed'
+        payment.status = 'completed'
         payment.save()
 
         payment.order.status = 'confirmed'

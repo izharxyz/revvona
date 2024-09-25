@@ -6,6 +6,7 @@ from accounts.models import Address
 
 class Order(models.Model):
     ORDER_STATUS_CHOICES = [
+        ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
         ('delivered', 'Delivered'),
         ('cancelled', 'Cancelled'),
