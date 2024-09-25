@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'accounts',
     'products',
     'cart',
-    'orders',
+    'checkout',
 ]
 
 MIDDLEWARE = [
@@ -289,7 +289,7 @@ UNFOLD = {
                     {
                         "title": _("Orders and Payments"),
                         "icon": "shopping_bag",
-                        "link": reverse_lazy("admin:app_list", kwargs={"app_label": "orders"}),
+                        "link": reverse_lazy("admin:app_list", kwargs={"app_label": "checkout"}),
                     },
                 ],
             },

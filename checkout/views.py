@@ -56,7 +56,6 @@ class OrderCreateView(generics.CreateAPIView):
                 order=order,
                 product=item.product,
                 quantity=item.quantity,
-                price=item.product.price * item.quantity
             )
 
         # Clear the user's cart after the order is created

@@ -9,7 +9,7 @@ from .models import Order, OrderItem, Payment
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity', 'price']
+        fields = ['id', 'product', 'quantity']
 
 
 class OrderSerializer(serializers.ModelSerializer):

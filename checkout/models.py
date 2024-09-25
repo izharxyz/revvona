@@ -34,14 +34,6 @@ class OrderItem(models.Model):
         Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey('products.Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True)  # Make nullable
-
-    def save(self, *args, **kwargs):
-        if self.price is None:
-            # Store the price at the time of order
-            self.price = self.product.price
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} (Order {self.order.id})"
