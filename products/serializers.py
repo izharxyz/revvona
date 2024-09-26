@@ -32,10 +32,3 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'name', 'description', 'price', 'discount', 'stock', 'image',
                   'category', 'category_id', 'average_rating', 'created_at', 'updated_at']
-
-
-class ProductDetailSerializer(ProductSerializer):
-    reviews = ReviewSerializer(many=True, read_only=True)
-
-    class Meta(ProductSerializer.Meta):
-        fields = ProductSerializer.Meta.fields + ['reviews']

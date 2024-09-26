@@ -4,8 +4,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Category, Product, Review
-from .serializers import (CategorySerializer, ProductDetailSerializer,
-                          ProductSerializer, ReviewSerializer)
+from .serializers import (CategorySerializer, ProductSerializer,
+                          ReviewSerializer)
 
 
 # List all products
@@ -14,8 +14,35 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
     permission_classes = [AllowAny]
 
+    def get_queryset(self):
+        # Overrides the default queryset to apply limit and skip parameters.
+        queryset = super().get_queryset()
+
+        limit = self.request.query_params.get('limit')
+        skip = self.request.query_params.get('skip')
+
+        # Apply skip parameter (offset)
+        if skip is not None:
+            try:
+                skip = int(skip)
+                queryset = queryset[skip:]
+            except ValueError:
+                # If skip is not a valid integer, ignore it
+                pass
+
+        # Apply limit parameter
+        if limit is not None:
+            try:
+                limit = int(limit)
+                queryset = queryset[:limit]
+            except ValueError:
+                # If limit is not a valid integer, ignore it
+                pass
+
+        return queryset
+
     def get(self, request, *args, **kwargs):
-        if not self.queryset.exists():
+        if not self.get_queryset().exists():
             return Response({"detail": "No products found."}, status=status.HTTP_404_NOT_FOUND)
         return super().get(request, *args, **kwargs)
 
@@ -23,7 +50,7 @@ class ProductListView(generics.ListAPIView):
 # Retrieve product details
 class ProductDetailView(generics.RetrieveAPIView):
     queryset = Product.objects.all()
-    serializer_class = ProductDetailSerializer
+    serializer_class = ProductSerializer
     permission_classes = [AllowAny]  # Unauthenticated users can access
 
     def get(self, request, *args, **kwargs):
@@ -70,6 +97,44 @@ class ProductByCategoryView(generics.ListAPIView):
             raise NotFound(
                 detail="Invalid category or no products found in this category.", code=status.HTTP_404_NOT_FOUND)
         return queryset
+
+# list reviews for a specific product with support for 'limit' and 'skip' GET params.
+
+
+class ProductReviewListView(generics.ListAPIView):
+
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        product_id = self.kwargs['pk']
+        try:
+            product = Product.objects.get(pk=product_id)
+        except Product.DoesNotExist:
+            raise ValidationError('Product not found.')
+
+        # Get limit and skip from request parameters, defaulting to 10 and 0 respectively
+        limit = self.request.query_params.get('limit', 5)
+        skip = self.request.query_params.get('skip', 0)
+
+        try:
+            limit = int(limit)
+            skip = int(skip)
+        except ValueError:
+            raise ValidationError(
+                'Invalid limit or skip parameter. Must be integers.')
+
+        # Query the reviews for the product with limit and offset (skip)
+        return Review.objects.filter(product=product).order_by('-created_at')[skip:skip + limit]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            # Total number of reviews
+            'count': Review.objects.filter(product_id=self.kwargs['pk']).count(),
+            'reviews': serializer.data
+        })
 
 
 class ReviewCreateView(generics.CreateAPIView):
