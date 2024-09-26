@@ -254,7 +254,7 @@ UNFOLD = {
                 "items": [
                     {
                         "title": _("Dashboard"),
-                        "icon": "dashboard",  # Supported icon set: https://fonts.google.com/icons
+                        "icon": "leaderboard",  # Supported icon set: https://fonts.google.com/icons
                         "link": reverse_lazy("admin:index"),
                         "permission": lambda request: request.user.is_superuser,
                     },
@@ -269,16 +269,16 @@ UNFOLD = {
                         "icon": "location_on",
                         "link": reverse_lazy("admin:accounts_address_changelist"),
                     },
-                    {
-                        "title": _("Products"),
-                        "icon": "store",
-                        "link": reverse_lazy("admin:products_product_changelist"),
-                    },
 
                     {
                         "title": _("Categories"),
                         "icon": "category",
                         "link": reverse_lazy("admin:products_category_changelist"),
+                    },
+                    {
+                        "title": _("Products and Reviews"),
+                        "icon": "potted_plant",
+                        "link": reverse_lazy("admin:products_product_changelist"),
                     },
 
                     {
