@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'products',
     'cart',
     'checkout',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
@@ -64,7 +65,9 @@ ROOT_URLCONF = 'agavi.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'dashboard', 'templates')
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -218,6 +221,10 @@ UNFOLD = {
     ],
     "SHOW_HISTORY": True,  # show/hide "History" button, default: True
     "SHOW_VIEW_ON_SITE": True,  # show/hide "View on site" button, default: True
+    "DASHBOARD_CALLBACK": "dashboard.views.dashboard_callback",  # custom dashboard view
+    "STYLES": [
+        lambda request: static("css/styles.css"),
+    ],
     "COLORS": {
         "font": {
             "subtle-light": "107 114 128",
@@ -248,26 +255,14 @@ UNFOLD = {
         "show_all_applications": False,  # Dropdown with all applications and models
         "navigation": [
             {
-                "title": _("Navigation"),
+                "title": _("Product Management"),
                 "separator": True,  # Top border
-                "collapsible": True,  # Collapsible group of links
                 "items": [
                     {
                         "title": _("Dashboard"),
                         "icon": "leaderboard",  # Supported icon set: https://fonts.google.com/icons
                         "link": reverse_lazy("admin:index"),
                         "permission": lambda request: request.user.is_superuser,
-                    },
-                    {
-                        "title": _("Users"),
-                        "icon": "people",
-                        "link": reverse_lazy("admin:auth_user_changelist"),
-                    },
-
-                    {
-                        "title": _("User Addresses"),
-                        "icon": "location_on",
-                        "link": reverse_lazy("admin:accounts_address_changelist"),
                     },
 
                     {
@@ -280,19 +275,50 @@ UNFOLD = {
                         "icon": "potted_plant",
                         "link": reverse_lazy("admin:products_product_changelist"),
                     },
-
+                ],
+            },
+            {
+                "title": _("Users and Groups"),
+                "collapsible": True,
+                "items": [
                     {
-                        "title": _("Carts"),
+                        "title": _("Users"),
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                    {
+                        "title": _("Groups"),
+                        "icon": "group",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                    },
+                    {
+                        "title": _("User Addresses"),
+                        "icon": "location_on",
+                        "link": reverse_lazy("admin:accounts_address_changelist"),
+                    },
+                    {
+                        "title": _("User Carts"),
                         "icon": "shopping_cart",
                         "link": reverse_lazy("admin:cart_cart_changelist"),
                     },
-                    {
-                        "title": _("Orders and Payments"),
-                        "icon": "shopping_bag",
-                        "link": reverse_lazy("admin:app_list", kwargs={"app_label": "checkout"}),
-                    },
                 ],
             },
+            {
+                "title": _("Orders and Payments"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Orders"),
+                        "icon": "shopping_bag",
+                        "link": reverse_lazy("admin:checkout_order_changelist"),
+                    },
+                    {
+                        "title": _("Payments"),
+                        "icon": "payment",
+                        "link": reverse_lazy("admin:checkout_payment_changelist"),
+                    },
+                ],
+            }
         ],
     },
 }
