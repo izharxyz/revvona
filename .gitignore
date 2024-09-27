@@ -13,7 +13,6 @@ __pycache__/
 db.sqlite3
 media/
 staticfiles/
-static/
 
 # Ignore the local environment and IDE settings
 .env
