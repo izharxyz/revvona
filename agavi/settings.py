@@ -197,8 +197,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 
 UNFOLD = {
-    "SITE_TITLE": "AGAVI ADMIN",
-    "SITE_HEADER": "AGAVI ADMINISTRATION",
+    "SITE_TITLE": _("AGAVI ADMIN"),
+    "SITE_HEADER": _("AGAVI ADMINISTRATION"),
     "SITE_URL": "https://agavi.in",
     # "SITE_ICON": lambda request: static("icon.svg"),  # both modes, optimise for 32px height
     "SITE_ICON": {
@@ -210,7 +210,7 @@ UNFOLD = {
         "light": lambda request: static("logo-light.svg"),  # light mode
         "dark": lambda request: static("logo-dark.svg"),  # dark mode
     },
-    "SITE_SYMBOL": "speed",  # symbol from icon set
+    "SITE_SYMBOL": "grass",  # symbol from icon set
     "SITE_FAVICONS": [
         {
             "rel": "icon",
@@ -260,7 +260,7 @@ UNFOLD = {
                 "items": [
                     {
                         "title": _("Dashboard"),
-                        "icon": "leaderboard",  # Supported icon set: https://fonts.google.com/icons
+                        "icon": "speed",  # Supported icon set: https://fonts.google.com/icons
                         "link": reverse_lazy("admin:index"),
                         "permission": lambda request: request.user.is_superuser,
                     },
