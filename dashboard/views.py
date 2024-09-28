@@ -27,7 +27,7 @@ def calculate_revenues(now):
 
 
 def get_last_30_days_labels(now):
-    return [(now - timedelta(days=i)).strftime('%b %d') for i in range(30)]
+    return [(now - timedelta(days=i)).strftime('%b %d') for i in range(30)][::-1]
 
 
 def calculate_last_30_days_sales(now):
@@ -40,7 +40,7 @@ def calculate_last_30_days_sales(now):
             updated_at__range=[day_start, day_end]
         ).count()
         sales.append(sales_count)
-    return sales
+    return sales[::-1]
 
 
 def calculate_order_status_counts(now):
@@ -69,7 +69,7 @@ def calculate_order_status_counts(now):
         delivered_orders.append(delivered_count)
         cancelled_orders.append(cancelled_count)
 
-    return confirmed_orders, delivered_orders, cancelled_orders
+    return confirmed_orders[::-1], delivered_orders[::-1], cancelled_orders[::-1]
 
 
 def populate_random_data(revenues, last_30_days_sales, confirmed_orders, delivered_orders, cancelled_orders):
