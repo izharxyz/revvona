@@ -1,0 +1,18 @@
+<div class="rounded-md border border-gray-300 dark:border-gray-800">
+    <div class="p-4">
+        <div class="flex justify-between items-center mb-2">
+            <p class="text-base text-gray-400">Number of new {{ object }}</p>
+
+            {% include 'admin/_badge.html' with badge_text='last 7 days' %}
+        </div>
+        <p class="text-3xl font-semibold">{{ value }}</p>
+    </div>
+    <div class="border-t border-gray-300 dark:border-gray-800 px-4 py-2 text-sm text-gray-400 flex items-center justify-between">
+        <div>
+            {% if increment >= 0 %}+{% else %}-{% endif %}{{ increment }}% increase from last week
+        </div>
+        <div>
+           Total number of {{ object }}: {{ total_value }}
+        </div>
+    </div>
+</div>
