@@ -1,10 +1,12 @@
 import random
 from datetime import timedelta
 
+from django.contrib.auth.models import User
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum
 from django.utils import timezone
 
 from checkout.models import Order, OrderItem
+from products.models import Category, Product
 
 
 def get_last_6_months_labels(now):
@@ -131,6 +133,75 @@ def get_top_products_data(now):
     return products_data
 
 
+def get_new_customers(now):
+    last_7_days = now - timedelta(days=7)
+    previous_7_days = now - timedelta(days=14)
+
+    current_customers = User.objects.filter(
+        date_joined__gte=last_7_days,
+        is_staff=False  # Exclude staff users
+    ).count()
+
+    previous_customers = User.objects.filter(
+        date_joined__range=[previous_7_days, last_7_days],
+        is_staff=False  # Exclude staff users
+    ).count()
+
+    increment = calculate_increment(current_customers, previous_customers)
+
+    return {
+        'name': 'Customers',
+        'value': current_customers,
+        'increment': increment,
+        # Total customers excluding staff
+        'total_value': User.objects.filter(is_staff=False).count()
+    }
+
+
+def get_new_products(now):
+    last_7_days = now - timedelta(days=7)
+    previous_7_days = now - timedelta(days=14)
+
+    current_products = Product.objects.filter(
+        created_at__gte=last_7_days).count()
+    previous_products = Product.objects.filter(
+        created_at__range=[previous_7_days, last_7_days]).count()
+
+    increment = calculate_increment(current_products, previous_products)
+
+    return {
+        'name': 'Products',
+        'value': current_products,
+        'increment': increment,
+        'total_value': Product.objects.count()  # Total products
+    }
+
+
+def get_new_categories(now):
+    last_7_days = now - timedelta(days=7)
+    previous_7_days = now - timedelta(days=14)
+
+    current_categories = Category.objects.filter(
+        created_at__gte=last_7_days).count()
+    previous_categories = Category.objects.filter(
+        created_at__range=[previous_7_days, last_7_days]).count()
+
+    increment = calculate_increment(current_categories, previous_categories)
+
+    return {
+        'name': 'Categories',
+        'value': current_categories,
+        'increment': increment,
+        'total_value': Category.objects.count()  # Total categories
+    }
+
+
+def calculate_increment(current_count, previous_count):
+    if previous_count == 0:
+        return 100.0 if current_count > 0 else 0.0  # Handle division by zero
+    return ((current_count - previous_count) / previous_count) * 100
+
+
 def dashboard_callback(request, context):
     now = timezone.now()
 
@@ -148,6 +219,12 @@ def dashboard_callback(request, context):
 
     top_products = get_top_products_data(now)
 
+    card_items = [
+        get_new_customers(now),
+        get_new_products(now),
+        get_new_categories(now)
+    ]
+
     # Update context
     context.update(
         {
@@ -158,7 +235,8 @@ def dashboard_callback(request, context):
             'confirmed_orders': confirmed_orders,
             'delivered_orders': delivered_orders,
             'cancelled_orders': cancelled_orders,
-            'top_products': top_products
+            'top_products': top_products,
+            'card_items': card_items
         }
     )
 
