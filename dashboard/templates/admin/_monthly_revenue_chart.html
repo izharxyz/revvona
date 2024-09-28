@@ -1,0 +1,76 @@
+<div class="rounded-md border border-gray-800">
+    <div class="flex justify-between items-center p-4 border-b border-gray-800">
+        <h2 class="text-base font-semibold">Monthly Revenue</h2>
+        {% include 'admin/_badge.html' with badge_text='last 6 months' %}
+    </div>
+    <div class="p-4">
+        <div class="relative w-full h-96">
+            <canvas id="monthlyRevenueChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    var months = {{ last_6_months_labels|safe }};
+    var revenueData = {{ revenues|safe }}; 
+
+    var ctx = document.getElementById('monthlyRevenueChart').getContext('2d');
+
+    // Custom plugin to draw the bottom border on each bar
+    var barBorderPlugin = {
+        id: 'barBorderPlugin',
+        afterDatasetsDraw: function(chart) {
+            var ctx = chart.ctx;
+            chart.data.datasets.forEach(function(dataset, datasetIndex) {
+                var meta = chart.getDatasetMeta(datasetIndex);
+
+                // Loop through each bar and draw a bottom border
+                meta.data.forEach(function(bar, index) {
+                    var barLeft = bar.x - bar.width / 2;
+                    var barRight = bar.x + bar.width / 2;
+                    var barBottom = bar.base;
+                    var barTop = bar.y;
+
+                    // Draw the bottom border (rectangle effect)
+                    ctx.save();
+                    ctx.strokeStyle = '#84cc16';  // Same color as the border
+                    ctx.lineWidth = 2;  // Border thickness
+                    ctx.beginPath();
+                    ctx.moveTo(barLeft, barBottom);  // Left bottom corner of the bar
+                    ctx.lineTo(barRight, barBottom);  // Right bottom corner of the bar
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
+    var monthlyRevenueChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Revenue',
+                data: revenueData,
+                backgroundColor: 'rgba(132, 204, 22, 0.05)',  // Light background color
+                borderColor: '#84cc16',  // Green border color
+                borderWidth: 2,  // Bar top border thickness
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        },
+        plugins: [barBorderPlugin]  // Add the custom plugin to draw bottom borders
+    });
+</script>
