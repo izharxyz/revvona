@@ -1,0 +1,115 @@
+<div class="rounded-md border border-gray-800">
+    <div class="flex justify-between items-center p-4 border-b border-gray-800">
+        <h2 class="text-base font-semibold">Order Performance</h2>
+        {% include 'admin/_badge.html' with badge_text='last 30 days' %}
+    </div>
+    <div class="p-4">
+        <div class="relative w-full h-96">
+            <canvas id="ordersStatusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    var confirmedOrdersData = {{ confirmed_orders|safe }};
+    var deliveredOrdersData = {{ delivered_orders|safe }};
+    var cancelledOrdersData = {{ cancelled_orders|safe }};
+    var last30DaysLabels = {{ last_30_days|safe }};
+
+    var allData = [...confirmedOrdersData, ...deliveredOrdersData, ...cancelledOrdersData];
+    var maxValue = Math.max(...allData);
+
+    // Calculate the new maximum y-axis value (30-40% more than the highest value)
+    var newMaxValue = Math.ceil(maxValue * 1.4); // Adjust multiplier for desired spacing
+
+    var ctx = document.getElementById('ordersStatusChart').getContext('2d');
+
+    // Custom plugin to draw dotted lines from each point to the bottom (x-axis)
+    var dottedLinePlugin = {
+        id: 'dottedLinePlugin',
+        afterDatasetsDraw: function(chart, easing) {
+            var ctx = chart.ctx;
+            var xAxis = chart.scales['x'];
+            var yAxis = chart.scales['y'];
+
+            chart.data.datasets.forEach(function(dataset, datasetIndex) {
+                var meta = chart.getDatasetMeta(datasetIndex);
+                meta.data.forEach(function(point, index) {
+                    // Get the position of the point (data point)
+                    var xPos = point.x;
+                    var yPos = point.y;
+
+                    // Set line style for the dotted line
+                    ctx.save();
+                    ctx.setLineDash([5, 5]);  // Make the line dotted
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';  // Light grey color
+                    ctx.lineWidth = 1;
+
+                    // Draw the line from the point to the bottom of the chart (x-axis label)
+                    ctx.beginPath();
+                    ctx.moveTo(xPos, yPos);  // Start at the data point
+                    ctx.lineTo(xPos, yAxis.bottom);  // Draw down to the bottom (x-axis)
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
+    var ordersStatusChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: last30DaysLabels, // Labels for the last 30 days
+            datasets: [
+                {
+                    label: 'Confirmed Orders',
+                    data: confirmedOrdersData,
+                    borderColor: '#36A2EB',  // Blue for confirmed orders
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 2,
+                },
+                {
+                    label: 'Delivered Orders',
+                    data: deliveredOrdersData,
+                    borderColor: '#4CAF50',  // Green for delivered orders
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 2,
+                },
+                {
+                    label: 'Cancelled Orders',
+                    data: cancelledOrdersData,
+                    borderColor: '#FF6384',  // Red for cancelled orders
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 2,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    grid: {
+                        display: false // Hide default vertical grid lines
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: newMaxValue, // Adjusted max value for y-axis
+                    grid: {
+                        display: false // Hide default horizontal grid lines
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true // Show legend for different datasets
+                }
+            }
+        },
+        plugins: [dottedLinePlugin]  // Add the custom plugin for dotted lines
+    });
+</script>
