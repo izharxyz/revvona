@@ -1,0 +1,101 @@
+<div class="rounded-md col-span-1 lg:col-span-3 border border-gray-800">
+    <div class="flex justify-between items-center p-4 border-b border-gray-800">
+        <h2 class="text-base font-semibold">Products Sales</h2>
+        {% include 'admin/_badge.html' with badge_text='last 30 days' %}
+    </div>
+    <div class="p-4">
+        <div class="relative w-full h-96">
+            <canvas id="salesOverTimeChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    var last30DaysLabels = {{ last_30_days|safe }};
+    var last30DaysSales = {{ last_30_days_sales|safe }};
+
+    var maxValue = Math.max(...last30DaysSales);
+    var newMaxValue = Math.ceil(maxValue * 1.4);
+
+    var ctx = document.getElementById('salesOverTimeChart').getContext('2d');
+
+    // Custom plugin to draw dotted lines from each point to the bottom (x-axis)
+    var dottedLinePlugin = {
+        id: 'dottedLinePlugin',
+        afterDatasetsDraw: function(chart, easing) {
+            var ctx = chart.ctx;
+            var xAxis = chart.scales['x'];
+            var yAxis = chart.scales['y'];
+
+            chart.data.datasets.forEach(function(dataset, datasetIndex) {
+                var meta = chart.getDatasetMeta(datasetIndex);
+                meta.data.forEach(function(point, index) {
+                    // Get the position of the point (data point)
+                    var xPos = point.x;
+                    var yPos = point.y;
+
+                    // Set line style for the dotted line
+                    ctx.save();
+                    ctx.setLineDash([5, 5]);  // Make the line dotted
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';  // Light grey color
+                    ctx.lineWidth = 1;
+
+                    // Draw the line from the point to the bottom of the chart (x-axis label)
+                    ctx.beginPath();
+                    ctx.moveTo(xPos, yPos);  // Start at the data point
+                    ctx.lineTo(xPos, yAxis.bottom);  // Draw down to the bottom (x-axis)
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
+    var salesOverTimeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: last30DaysLabels, // Last 30 days from Django
+            datasets: [{
+                data: last30DaysSales, // Sales data for the last 30 days
+                backgroundColor: 'rgba(168, 85, 247, 0.05)',  // Custom color with transparency
+                borderColor: 'rgba(168, 85, 247, 1)',  // Custom line color
+                borderWidth: 2,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // Disable aspect ratio to control size manually
+            scales: {
+                x: {
+                    grid: {
+                        display: false // Hide the default vertical grid lines
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: newMaxValue, // Set the new maximum value for the y-axis
+                    grid: {
+                        display: false // Hide the horizontal grid lines
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false // Disable the legend (label)
+                }
+            },
+            elements: {
+                line: {
+                    tension: 0.3 // Adds curve to the line for smoother appearance
+                },
+                point: {
+                    radius: 3, // Size of the points
+                    hitRadius: 10, // Area around the point that registers clicks
+                    hoverRadius: 6 // Size of points on hover
+                }
+            }
+        },
+        plugins: [dottedLinePlugin]  // Add the custom plugin
+    });
+</script>
