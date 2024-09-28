@@ -3,8 +3,8 @@
 {% block breadcrumbs %}{% endblock %}
 
 {% block content %}
-<div class="h-full w-full">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="h-full w-full lg:py-4 mb-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
         <!-- Product Performance Cards -->
         {% for product in top_products %}
             {% include 'admin/_product_performance_card.html' with product_name=product.product_name sales_price=product.sales_price increment=product.increment %}
@@ -14,7 +14,7 @@
         <!-- Sales Over Time Chart -->
         {% include 'admin/_product_sales_chart.html' with last_30_days=last_30_days last_30_days_sales=last_30_days_sales %}
 
-        <div class="col-span-1 lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="col-span-1 lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
             <!-- Monthly Revenue Chart -->
             {% include 'admin/_monthly_revenue_chart.html' with last_6_months_labels=last_6_months_labels revenues=revenues %}
 

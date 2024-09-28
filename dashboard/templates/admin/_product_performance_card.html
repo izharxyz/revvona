@@ -1,4 +1,4 @@
-<div class="rounded-md border border-gray-800">
+<div class="rounded-md border border-gray-300 dark:border-gray-800">
     <div class="p-4">
         <div class="flex justify-between items-center mb-2">
             <p class="text-base text-gray-400">{{ product_name }} Performance</p>
@@ -7,7 +7,7 @@
         </div>
         <p class="text-3xl font-semibold">{{ sales_price }}</p>
     </div>
-    <div class="border-t border-gray-800 px-4 py-2 text-sm text-gray-400">
+    <div class="border-t border-gray-300 dark:border-gray-800 px-4 py-2 text-sm text-gray-400">
         {% if increment >= 0 %}+{% else %}-{% endif %}{{ increment }}% increase from last week
     </div>
 </div>

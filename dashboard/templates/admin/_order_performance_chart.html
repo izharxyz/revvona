@@ -1,10 +1,10 @@
-<div class="rounded-md border border-gray-800">
-    <div class="flex justify-between items-center p-4 border-b border-gray-800">
+<div class="rounded-md border border-gray-300 dark:border-gray-800">
+    <div class="flex justify-between items-center p-4 border-b border-gray-300 dark:border-gray-800">
         <h2 class="text-base font-semibold">Order Performance</h2>
         {% include 'admin/_badge.html' with badge_text='last 30 days' %}
     </div>
     <div class="p-4">
-        <div class="relative w-full h-96">
+        <div class="relative w-full h-72 lg:h-96">
             <canvas id="ordersStatusChart"></canvas>
         </div>
     </div>
