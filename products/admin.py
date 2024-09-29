@@ -9,18 +9,18 @@ class ImageInline(TabularInline):
     model = Image
     extra = 0
     can_delete = True
-    fields = ('product', 'image', 'created_at', 'updated_at')
+    fields = ('image',)
     show_change_link = True
+    hide_title = True
 
 
 class ReviewInline(TabularInline):
     model = Review
     extra = 0
     can_delete = True
-    readonly_fields = ('user', 'product', 'rating',
-                       'comment', 'created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at')
     fields = ('user', 'product', 'rating',
-              'comment', 'created_at', 'updated_at')
+              'comment')
     show_change_link = True
 
 
@@ -29,13 +29,11 @@ class ProductAdmin(ModelAdmin):
                     'created_at', 'updated_at')
     search_fields = ('name', 'description')
     list_filter = ('created_at', 'updated_at')
-    # Ensures the average_rating is displayed as read-only
     readonly_fields = ('average_rating',)
     inlines = [ImageInline, ReviewInline]
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        # Include the average_rating in the queryset
         queryset = queryset.annotate(
             average_rating=models.Avg('reviews__rating'))
         return queryset
@@ -51,6 +49,5 @@ class CategoryAdmin(ModelAdmin):
     list_filter = ('featured', 'created_at', 'updated_at')
 
 
-# Register your models here
 admin.site.register(Product, ProductAdmin)
 admin.site.register(Category, CategoryAdmin)
