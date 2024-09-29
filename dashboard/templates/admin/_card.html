@@ -11,8 +11,8 @@
         <div>
             {% if increment >= 0 %}+{% else %}-{% endif %}{{ increment }}% increase from last week
         </div>
-        <div>
-           Total {{ object }}: {{ total_value }}
+        <div class="text-right">
+           Total {{ object }}: <span class="font-semibold">{{ total_value }}</span>
         </div>
     </div>
 </div>
