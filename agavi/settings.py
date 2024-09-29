@@ -200,23 +200,25 @@ UNFOLD = {
     "SITE_TITLE": _("AGAVI ADMIN"),
     "SITE_HEADER": _("AGAVI ADMINISTRATION"),
     "SITE_URL": "https://agavi.in",
-    # "SITE_ICON": lambda request: static("icon.svg"),  # both modes, optimise for 32px height
-    "SITE_ICON": {
-        "light": lambda request: static("icon-light.svg"),  # light mode
-        "dark": lambda request: static("icon-dark.svg"),  # dark mode
-    },
-    # "SITE_LOGO": lambda request: static("logo.svg"),  # both modes, optimise for 32px height
-    "SITE_LOGO": {
-        "light": lambda request: static("logo-light.svg"),  # light mode
-        "dark": lambda request: static("logo-dark.svg"),  # dark mode
-    },
+    # both modes, optimise for 32px height
+    "SITE_ICON": lambda request: static("icon.png"),
+    # "SITE_ICON": {
+    #     "light": lambda request: static("logo-light.png"),  # light mode
+    #     "dark": lambda request: static("logo-dark.png"),  # dark mode
+    # },
+    # both modes, optimise for 32px height
+    "SITE_LOGO": lambda request: static("logo.png"),
+    # "SITE_LOGO": {
+    #     "light": lambda request: static("logo-light.png"),  # light mode
+    #     "dark": lambda request: static("logo-dark.png"),  # dark mode
+    # },
     "SITE_SYMBOL": "grass",  # symbol from icon set
     "SITE_FAVICONS": [
         {
             "rel": "icon",
             "sizes": "32x32",
-            "type": "image/svg+xml",
-            "href": lambda request: static("favicon.svg"),
+            "type": "image/png",
+            "href": lambda request: static("favicon.png"),
         },
     ],
     "SHOW_HISTORY": True,  # show/hide "History" button, default: True
