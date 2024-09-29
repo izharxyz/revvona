@@ -26,7 +26,6 @@ class Product(models.Model):
     discount = models.PositiveIntegerField(blank=True, null=True, validators=[
                                            MinValueValidator(0), MaxValueValidator(100)])
     stock = models.IntegerField(default=1)
-    image = models.ImageField(upload_to='products/', null=False, blank=False)
     category = models.ForeignKey(
         Category, related_name='products', on_delete=models.SET_NULL, null=True)
 
@@ -52,6 +51,15 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         # Optionally, you can precompute and store average ratings and total reviews in the DB
+
+
+class Image(models.Model):
+    product = models.ForeignKey(
+        Product, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='products/', null=False, blank=False)
+
+    def __str__(self):
+        return self.product.name
 
 
 class Review(models.Model):

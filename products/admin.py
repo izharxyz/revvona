@@ -2,7 +2,15 @@ from django.contrib import admin
 from django.db import models
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Category, Product, Review
+from .models import Category, Image, Product, Review
+
+
+class ImageInline(TabularInline):
+    model = Image
+    extra = 0
+    can_delete = True
+    fields = ('product', 'image', 'created_at', 'updated_at')
+    show_change_link = True
 
 
 class ReviewInline(TabularInline):
@@ -23,7 +31,7 @@ class ProductAdmin(ModelAdmin):
     list_filter = ('created_at', 'updated_at')
     # Ensures the average_rating is displayed as read-only
     readonly_fields = ('average_rating',)
-    inlines = [ReviewInline]
+    inlines = [ImageInline, ReviewInline]
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
