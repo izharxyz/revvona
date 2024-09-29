@@ -1,3 +1,4 @@
+import cloudinary
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -18,6 +19,12 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    def delete(self, *args, **kwargs):
+        # Delete the image from Cloudinary
+        if self.image:
+            cloudinary.uploader.destroy(self.image.name)
+        super().delete(*args, **kwargs)
+
 
 class Product(models.Model):
     name = models.CharField(max_length=200, blank=False, null=False)
@@ -27,7 +34,10 @@ class Product(models.Model):
                                            MinValueValidator(0), MaxValueValidator(100)])
     stock = models.IntegerField(default=1)
     category = models.ForeignKey(
-        Category, related_name='products', on_delete=models.SET_NULL, null=True)
+        'Category', related_name='products', on_delete=models.SET_NULL, null=True)
+
+    average_rating_value = models.DecimalField(
+        max_digits=2, decimal_places=1, default=0.0, editable=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -35,22 +45,35 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
-    # Method to calculate the average rating
     @property
     def average_rating(self):
-        reviews = self.reviews.aggregate(average=models.Avg('rating'))
-        average = reviews['average']
-        return round(average, 1) if average else 0.0
+        return self.average_rating_value
 
-    # Method to calculate the total number of reviews
+    @average_rating.setter
+    def average_rating(self, value):
+        self.average_rating_value = round(value, 1) if value else 0.0
+
     @property
     def total_reviews(self):
         return self.reviews.aggregate(count=Count('id'))['count']
 
-    # Overriding the save method to store these calculated fields in the model itself
+    def calculate_average_rating(self):
+        # Calculate average rating only if the product already has an ID (i.e., it's been saved)
+        if self.pk:
+            reviews = self.reviews.aggregate(average=Avg('rating'))
+            average = reviews['average']
+            self.average_rating = average if average else 0.0
+
     def save(self, *args, **kwargs):
+        # Calculate average rating before saving
+        self.calculate_average_rating()
         super().save(*args, **kwargs)
-        # Optionally, you can precompute and store average ratings and total reviews in the DB
+
+    def delete(self, *args, **kwargs):
+        # Delete the images associated with the product
+        for image in self.images.all():
+            image.delete()
+        super().delete(*args, **kwargs)
 
 
 class Image(models.Model):
@@ -60,6 +83,12 @@ class Image(models.Model):
 
     def __str__(self):
         return self.product.name
+
+    def delete(self, *args, **kwargs):
+        # Delete the image from Cloudinary
+        if self.image:
+            cloudinary.uploader.destroy(self.image.name)
+        super().delete(*args, **kwargs)
 
 
 class Review(models.Model):
