@@ -13,14 +13,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
+DEBUG = os.getenv('ENV') != 'PROD'
 
-if os.getenv('ENV') == 'PROD':
-    DEBUG = False
-else:
-    DEBUG = True
+ALLOWED_HOSTS = [
+    os.getenv('ALLOWED_HOST'),
+    'agavi.in',
+    '.cloudflarestorage.com',
+    '.vercel.app',
+]
 
-ALLOWED_HOSTS = [os.getenv('ALLOWED_HOST'),
-                 '.cloudflarestorage.com', '.vercel.app']
+print(ALLOWED_HOSTS)
+print(DEBUG)
+print(os.getenv('ENV'))
 
 INSTALLED_APPS = [
     'unfold',
@@ -52,7 +56,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Whitenoise for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',                    # CORS
+    'corsheaders.middleware.CorsMiddleware',  # CORS
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -66,7 +70,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'dashboard', 'templates')
+            BASE_DIR / 'dashboard' / 'templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -119,67 +123,54 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 SIMPLE_JWT = {
-    # 5 hours for access token
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=300),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # 1 day for refresh token
-    # Don't rotate refresh tokens on access token refresh
+    # User will be logged in for 10 days
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=10),
     'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': True,  # Blacklist tokens after rotation
-    'UPDATE_LAST_LOGIN': False,  # Don't update the last login on token refresh
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
 
-    'ALGORITHM': 'HS256',  # Default signing algorithm
-    'SIGNING_KEY': SECRET_KEY,  # Use the Django secret key for token signing
-    # Not required unless you're using asymmetric keys (RSA/ECDSA)
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
     'VERIFYING_KEY': None,
-    'AUDIENCE': None,  # Not using specific audience validation
-    'ISSUER': None,  # Not using issuer validation
+    'AUDIENCE': None,
+    'ISSUER': None,
 
-    # Cookie settings for access and refresh tokens
-    'AUTH_COOKIE': 'access_token',  # Name of the access token cookie
-    'REFRESH_COOKIE': 'refresh_token',  # Name of the refresh token cookie
+    'AUTH_COOKIE': 'access_token',
+    'REFRESH_COOKIE': 'refresh_token',
+    'AUTH_COOKIE_SECURE': not DEBUG,
+    'REFRESH_COOKIE_SECURE': not DEBUG,
 
-    # Set to True in production (use HTTPS)
-    'AUTH_COOKIE_SECURE': False if DEBUG else True,
-    # Set to True in production (use HTTPS)
-    'REFRESH_COOKIE_SECURE': False if DEBUG else True,
-
-    # Default token type in the Authorization header
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',  # Default header for authorization
-    'USER_ID_FIELD': 'id',  # Field for the user ID
-    'USER_ID_CLAIM': 'user_id',  # Claim for the user ID
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
 
-    # Only use AccessToken class
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'TOKEN_TYPE_CLAIM': 'token_type',  # Claim used to store token type
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'JTI_CLAIM': 'jti',
 
-    'JTI_CLAIM': 'jti',  # JWT token identifier claim for blacklisting
-
-    # Settings for sliding tokens (not necessary if not using sliding tokens)
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
-
-# # Enable CSRF protection
+# Enable CSRF protection
 if os.getenv('ENV') == 'PROD':
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        # custom JWT middleware for cookies based auth
         'accounts.authentication.CustomJWTAuthentication',
     )
 }
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
@@ -191,29 +182,17 @@ CLOUDINARY_STORAGE = {
     'SECURE': True,
 }
 
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
-
 
 UNFOLD = {
     "SITE_TITLE": _("AGAVI ADMIN"),
     "SITE_HEADER": _("AGAVI ADMINISTRATION"),
     "SITE_URL": "https://agavi.in",
-    # both modes, optimise for 32px height
     "SITE_ICON": lambda request: static("icon.png"),
-    # "SITE_ICON": {
-    #     "light": lambda request: static("logo-light.png"),  # light mode
-    #     "dark": lambda request: static("logo-dark.png"),  # dark mode
-    # },
-    # both modes, optimise for 32px height
     "SITE_LOGO": lambda request: static("logo.png"),
-    # "SITE_LOGO": {
-    #     "light": lambda request: static("logo-light.png"),  # light mode
-    #     "dark": lambda request: static("logo-dark.png"),  # dark mode
-    # },
-    "SITE_SYMBOL": "grass",  # symbol from icon set
+    "SITE_SYMBOL": "grass",
     "SITE_FAVICONS": [
         {
             "rel": "icon",
@@ -222,9 +201,9 @@ UNFOLD = {
             "href": lambda request: static("favicon.png"),
         },
     ],
-    "SHOW_HISTORY": True,  # show/hide "History" button, default: True
-    "SHOW_VIEW_ON_SITE": True,  # show/hide "View on site" button, default: True
-    "DASHBOARD_CALLBACK": "dashboard.views.dashboard_callback",  # custom dashboard view
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "DASHBOARD_CALLBACK": "dashboard.views.dashboard_callback",
     "STYLES": [
         lambda request: static("css/styles.css"),
     ],
@@ -237,7 +216,6 @@ UNFOLD = {
             "important-light": "17 24 39",
             "important-dark": "243 244 246",
         },
-        # lime color scheme
         "primary": {
             "50": "247 254 231",
             "100": "236 252 203",
@@ -252,22 +230,20 @@ UNFOLD = {
             "950": "26 46 5",
         },
     },
-
     "SIDEBAR": {
-        "show_search": True,  # Search in applications and models names
-        "show_all_applications": False,  # Dropdown with all applications and models
+        "show_search": True,
+        "show_all_applications": False,
         "navigation": [
             {
                 "title": _("Product Management"),
-                "separator": True,  # Top border
+                "separator": True,
                 "items": [
                     {
                         "title": _("Dashboard"),
-                        "icon": "speed",  # Supported icon set: https://fonts.google.com/icons
+                        "icon": "speed",
                         "link": reverse_lazy("admin:index"),
                         "permission": lambda request: request.user.is_superuser,
                     },
-
                     {
                         "title": _("Categories"),
                         "icon": "category",
