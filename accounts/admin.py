@@ -4,7 +4,9 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from unfold.admin import ModelAdmin
+from unfold.forms import UserChangeForm
 
+from .forms import CustomUserCreationForm
 from .models import Address
 
 admin.site.unregister(User)
@@ -12,7 +14,14 @@ admin.site.unregister(Group)
 
 
 class UserAdmin(BaseUserAdmin, ModelAdmin):
-    pass
+    add_form = CustomUserCreationForm  # Use the custom form for user creation
+    form = UserChangeForm  # Use the custom form for user editing
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2'),
+        }),
+    )
 
 
 class GroupAdmin(BaseGroupAdmin, ModelAdmin):
