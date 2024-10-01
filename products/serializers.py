@@ -6,8 +6,7 @@ from .models import Category, Image, Product, Review
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'quote',
-                  'image', 'featured', 'created_at', 'updated_at']
+        fields = '__all__'
 
 
 class ReviewSerializer(serializers.ModelSerializer):
