@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions, status
+from rest_framework import permissions, status, viewsets
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -8,18 +8,32 @@ from .serializers import (CategorySerializer, ProductSerializer,
                           ReviewSerializer)
 
 
-# List all products
-class ProductListView(generics.ListAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
+### Helper Functions for Consistent Responses ###
+def success_response(data, message="Success", status_code=status.HTTP_200_OK):
+    return Response({
+        "success": True,
+        "message": message,
+        "data": data
+    }, status=status_code)
+
+
+def error_response(message="Error", details=None, status_code=status.HTTP_400_BAD_REQUEST):
+    return Response({
+        "success": False,
+        "message": message,
+        "details": details
+    }, status=status_code)
+
+# Combined Product ViewSet for listing and detail
+
+
+class ProductViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
-    def get_queryset(self):
-        # Overrides the default queryset to apply limit and skip parameters.
-        queryset = super().get_queryset()
-
-        limit = self.request.query_params.get('limit')
-        skip = self.request.query_params.get('skip')
+    def list(self, request):
+        limit = request.query_params.get('limit')
+        skip = request.query_params.get('skip')
+        queryset = Product.objects.all()
 
         # Apply skip parameter (offset)
         if skip is not None:
@@ -27,8 +41,7 @@ class ProductListView(generics.ListAPIView):
                 skip = int(skip)
                 queryset = queryset[skip:]
             except ValueError:
-                # If skip is not a valid integer, ignore it
-                pass
+                return error_response("Invalid skip value. It must be an integer.", status_code=status.HTTP_400_BAD_REQUEST)
 
         # Apply limit parameter
         if limit is not None:
@@ -36,153 +49,150 @@ class ProductListView(generics.ListAPIView):
                 limit = int(limit)
                 queryset = queryset[:limit]
             except ValueError:
-                # If limit is not a valid integer, ignore it
-                pass
+                return error_response("Invalid limit value. It must be an integer.", status_code=status.HTTP_400_BAD_REQUEST)
 
-        return queryset
-
-    def get(self, request, *args, **kwargs):
-        if not self.get_queryset().exists():
-            return Response({"detail": "No products found."}, status=status.HTTP_404_NOT_FOUND)
-        return super().get(request, *args, **kwargs)
-
-
-# Retrieve product details
-class ProductDetailView(generics.RetrieveAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [AllowAny]  # Unauthenticated users can access
-
-    def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except Product.DoesNotExist:
-            return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
-
-
-# List all categories
-class CategoryListView(generics.ListAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-    permission_classes = [AllowAny]  # Unauthenticated users can access
-
-    def get(self, request, *args, **kwargs):
-        if not self.queryset.exists():
-            return Response({"detail": "No categories found."}, status=status.HTTP_404_NOT_FOUND)
-        return super().get(request, *args, **kwargs)
-
-
-# List featured categories
-class FeaturedCategoryListView(generics.ListAPIView):
-    queryset = Category.objects.filter(featured=True)
-    serializer_class = CategorySerializer
-    permission_classes = [AllowAny]  # Unauthenticated users can access
-
-    def get(self, request, *args, **kwargs):
-        if not self.queryset.exists():
-            return Response({"detail": "No featured categories found."}, status=status.HTTP_404_NOT_FOUND)
-        return super().get(request, *args, **kwargs)
-
-# List products by category
-
-
-class ProductByCategoryView(generics.ListAPIView):
-    serializer_class = ProductSerializer
-    permission_classes = [AllowAny]  # Unauthenticated users can access
-
-    def get_queryset(self):
-        category_slug = self.kwargs['category_slug']
-        queryset = Product.objects.filter(category__slug=category_slug)
         if not queryset.exists():
-            raise NotFound(
-                detail="Invalid category or no products found in this category.", code=status.HTTP_404_NOT_FOUND)
-        return queryset
+            return error_response("No products found.", status_code=status.HTTP_404_NOT_FOUND)
 
-# list reviews for a specific product with support for 'limit' and 'skip' GET params.
+        serializer = ProductSerializer(queryset, many=True)
+        return success_response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        try:
+            product = Product.objects.get(pk=pk)
+            serializer = ProductSerializer(product)
+            return success_response(serializer.data)
+        except Product.DoesNotExist:
+            return error_response("Product not found.", status_code=status.HTTP_404_NOT_FOUND)
+
+# Combined Review ViewSet for create, update, and delete
 
 
-class ProductReviewListView(generics.ListAPIView):
+class ReviewViewSet(viewsets.ViewSet):
 
-    serializer_class = ReviewSerializer
-    permission_classes = [permissions.AllowAny]
+    def get_permissions(self):
+        """
+        Allow anyone to list reviews, but require authentication for other actions.
+        """
+        if self.action == 'list':
+            self.permission_classes = [AllowAny]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        return super().get_permissions()
 
-    def get_queryset(self):
-        product_id = self.kwargs['pk']
+    def list(self, request, product_id=None):
         try:
             product = Product.objects.get(pk=product_id)
         except Product.DoesNotExist:
-            raise ValidationError('Product not found.')
+            return error_response('Product not found.', status_code=status.HTTP_404_NOT_FOUND)
 
-        # Get limit and skip from request parameters, defaulting to 10 and 0 respectively
-        limit = self.request.query_params.get('limit', 5)
-        skip = self.request.query_params.get('skip', 0)
+        limit = request.query_params.get('limit', 5)
+        skip = request.query_params.get('skip', 0)
 
         try:
             limit = int(limit)
             skip = int(skip)
         except ValueError:
-            raise ValidationError(
-                'Invalid limit or skip parameter. Must be integers.')
+            return error_response('Invalid limit or skip parameter. Must be integers.')
 
-        # Query the reviews for the product with limit and offset (skip)
-        return Review.objects.filter(product=product).order_by('-created_at')[skip:skip + limit]
+        queryset = Review.objects.filter(product=product).order_by(
+            '-created_at')[skip:skip + limit]
+        serializer = ReviewSerializer(queryset, many=True)
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            # Total number of reviews
-            'count': Review.objects.filter(product_id=self.kwargs['pk']).count(),
+        return success_response({
+            'count': Review.objects.filter(product_id=product_id).count(),
             'reviews': serializer.data
         })
 
-
-class ReviewCreateView(generics.CreateAPIView):
-    serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        product_id = self.request.data.get(
-            'product_id')  # Get product_id from POST data
+    def create(self, request):
+        product_id = request.data.get('product_id')
         if not product_id:
-            raise ValidationError('Product ID is required to create a review.')
+            return error_response('Product ID is required to create a review.')
 
         try:
             product = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
-            raise ValidationError('Product not found.')
+            return error_response('Product not found.')
 
-        # Ensure the user hasn't already reviewed this product
-        if Review.objects.filter(product=product, user=self.request.user).exists():
-            raise ValidationError('You have already reviewed this product.')
+        if Review.objects.filter(product=product, user=request.user).exists():
+            return error_response('You have already reviewed this product.')
 
-        serializer.save(user=self.request.user, product=product)
+        serializer = ReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user, product=product)
+            return success_response(serializer.data, "Review created successfully.", status_code=status.HTTP_201_CREATED)
+        return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk=None):
+        try:
+            review = Review.objects.get(pk=pk, user=request.user)
+        except Review.DoesNotExist:
+            return error_response("Review not found or you do not have permission to update it.", status_code=status.HTTP_404_NOT_FOUND)
+
+        serializer = ReviewSerializer(review, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(serializer.data, "Review updated successfully.")
+        return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, pk=None):
+        try:
+            review = Review.objects.get(pk=pk, user=request.user)
+            review.delete()
+            return success_response(None, "Review deleted successfully.", status_code=status.HTTP_204_NO_CONTENT)
+        except Review.DoesNotExist:
+            return error_response("Review not found or you do not have permission to delete it.", status_code=status.HTTP_404_NOT_FOUND)
+
+# Combined Category ViewSet for listing categories and featured categories
 
 
-class ReviewUpdateView(generics.UpdateAPIView):
-    serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated]
+class CategoryViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
 
-    def get_queryset(self):
-        # Limit the queryset to the reviews made by the current user.
-        return Review.objects.filter(user=self.request.user)
+    def list(self, request):
+        queryset = Category.objects.all()
+        if not queryset.exists():
+            return error_response("No categories found.", status_code=status.HTTP_404_NOT_FOUND)
 
-    def perform_update(self, serializer):
-        review = self.get_object()
-        if review.user != self.request.user:
-            raise ValidationError('You can only update your own review.')
-        serializer.save()
+        serializer = CategorySerializer(queryset, many=True)
+        return success_response(serializer.data)
 
+    def featured(self, request):
+        queryset = Category.objects.filter(featured=True)
+        if not queryset.exists():
+            return error_response("No featured categories found.", status_code=status.HTTP_404_NOT_FOUND)
 
-class ReviewDeleteView(generics.DestroyAPIView):
-    serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated]
+        serializer = CategorySerializer(queryset, many=True)
+        return success_response(serializer.data)
 
-    def get_queryset(self):
-        # Limit the queryset to the reviews made by the current user.
-        return Review.objects.filter(user=self.request.user)
+    # Retrieve products by category slug
+    def products(self, request, category_slug=None):
+        try:
+            category = Category.objects.get(slug=category_slug)
+            queryset = Product.objects.filter(category=category)
 
-    def perform_destroy(self, instance):
-        if instance.user != self.request.user:
-            raise ValidationError('You can only delete your own review.')
-        instance.delete()
+            if not queryset.exists():
+                return error_response("No products found in this category.", status_code=status.HTTP_404_NOT_FOUND)
+
+            # Get limit and skip from request parameters, with defaults
+            limit = request.query_params.get('limit', 10)
+            skip = request.query_params.get('skip', 0)
+
+            try:
+                limit = int(limit)
+                skip = int(skip)
+            except ValueError:
+                return error_response("Invalid limit or skip parameter. Must be integers.")
+
+            # Paginate the queryset
+            paginated_queryset = queryset[skip:skip + limit]
+
+            serializer = ProductSerializer(paginated_queryset, many=True)
+
+            return success_response({
+                "count": queryset.count(),  # Total products in the category
+                "products": serializer.data
+            })
+
+        except Category.DoesNotExist:
+            return error_response("Category not found.", status_code=status.HTTP_404_NOT_FOUND)
