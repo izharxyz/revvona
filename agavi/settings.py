@@ -22,10 +22,6 @@ ALLOWED_HOSTS = [
     '.vercel.app',
 ]
 
-print(ALLOWED_HOSTS)
-print(DEBUG)
-print(os.getenv('ENV'))
-
 INSTALLED_APPS = [
     'unfold',
     'unfold.contrib.filters',
