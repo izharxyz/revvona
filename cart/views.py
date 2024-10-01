@@ -1,86 +1,88 @@
-from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Cart, CartItem, Product
 from .serializers import CartItemSerializer, CartSerializer
 
 
-# Get or create a cart for the authenticated user
-class CartView(generics.RetrieveAPIView):
+### Helper Functions for Consistent Responses ###
+def success_response(data, message="Success", status_code=status.HTTP_200_OK):
+    return Response({
+        "success": True,
+        "message": message,
+        "data": data
+    }, status=status_code)
+
+
+def error_response(message="Error", details=None, status_code=status.HTTP_400_BAD_REQUEST):
+    return Response({
+        "success": False,
+        "message": message,
+        "details": details
+    }, status=status_code)
+
+
+class CartViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def get_object(self):
-        # Get or create the cart for the user
-        cart, created = Cart.objects.get_or_create(user=self.request.user)
-        return cart
+    def retrieve_cart(self, request):
+        """ Retrieve the authenticated user's cart. Creates one if it doesn't exist. """
+        try:
+            cart, _ = Cart.objects.get_or_create(user=request.user)
+            serializer = CartSerializer(cart)
+            return success_response(serializer.data)
+        except Exception as e:
+            return error_response("An error occurred while retrieving the cart.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def get(self, request, *args, **kwargs):
-        cart = self.get_object()
-        serializer = CartSerializer(cart)
-        return Response(serializer.data)
+    def add_to_cart(self, request):
+        product_id = request.data.get('product')
+        if not product_id:
+            return error_response("Product ID is required.", status_code=status.HTTP_400_BAD_REQUEST)
 
-
-# Add an item to the cart
-class AddToCartView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = CartItemSerializer
-
-    def perform_create(self, serializer):
-        # Ensure the product exists before adding to the cart
-        product_id = self.request.data.get('product')
         try:
             product = Product.objects.get(id=product_id)
-            cart, _ = Cart.objects.get_or_create(user=self.request.user)
-            serializer.save(cart=cart, product=product)
+            cart, _ = Cart.objects.get_or_create(user=request.user)
+            serializer = CartItemSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(cart=cart, product=product)
+                return success_response(serializer.data, "Item added to cart.", status_code=status.HTTP_201_CREATED)
+            return error_response("Invalid data.", serializer.errors)
         except Product.DoesNotExist:
-            raise serializer.ValidationError("Product does not exist.")
+            return error_response("Product not found.", status_code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while adding item to cart.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    def update_cart_item(self, request, pk=None):
+        try:
+            cart_item = CartItem.objects.get(pk=pk, cart__user=request.user)
+            serializer = CartItemSerializer(cart_item, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return success_response(serializer.data, "Item updated successfully.")
+            return error_response("Invalid data.", serializer.errors)
+        except CartItem.DoesNotExist:
+            return error_response("Item not found in your cart.", status_code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while updating the item.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def remove_cart_item(self, request, pk=None):
+        try:
+            cart_item = CartItem.objects.get(pk=pk, cart__user=request.user)
+            cart_item.delete()
+            return success_response(None, "Item removed from cart.", status_code=status.HTTP_204_NO_CONTENT)
+        except CartItem.DoesNotExist:
+            return error_response("Item not found in your cart.", status_code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while removing the item.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# Update the quantity of an item in the cart
-class UpdateCartItemView(generics.UpdateAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = CartItemSerializer
-
-    def get_queryset(self):
-        return CartItem.objects.filter(cart__user=self.request.user)
-
-
-# Remove an item from the cart
-class RemoveCartItemView(generics.DestroyAPIView):
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return CartItem.objects.filter(cart__user=self.request.user)
-
-
-# View cart items
-class CartItemListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = CartItemSerializer
-
-    def get_queryset(self):
-        cart = Cart.objects.filter(user=self.request.user).first()
-        if cart:
-            return CartItem.objects.filter(cart=cart)
-        return CartItem.objects.none()  # Return an empty queryset if no cart is found
-
-
-class ClearCartView(generics.DestroyAPIView):
-    permission_classes = [IsAuthenticated]
-
-    def delete(self, request, *args, **kwargs):
-        # Get the user's cart
+    def clear_cart(self, request):
         try:
             cart = Cart.objects.get(user=request.user)
-            # Delete all cart items
             CartItem.objects.filter(cart=cart).delete()
-            return Response({"detail": "Cart cleared successfully."}, status=status.HTTP_204_NO_CONTENT)
+            return success_response(None, "Cart cleared successfully.", status_code=status.HTTP_204_NO_CONTENT)
         except Cart.DoesNotExist:
-            return Response({"detail": "Cart does not exist."}, status=status.HTTP_404_NOT_FOUND)
+            return error_response("Cart not found.", status_code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while clearing the cart.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
