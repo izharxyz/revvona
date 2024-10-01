@@ -1,35 +1,33 @@
 from django.urls import path
-from rest_framework.routers import DefaultRouter
 
-from accounts import views
-
-router = DefaultRouter()
+from . import views
 
 urlpatterns = [
-    # 1. User Registration and Authentication
+    # User Registration and Authentication
     path('register/',
-         views.UserRegisterView.as_view({'post': 'create'}), name="register"),
-    path('login/', views.UserLoginView.as_view(), name="login"),
+         views.UserAuthViewSet.as_view({'post': 'register_user'}), name="register"),
     path(
-        'logout/', views.UserLogoutView.as_view({'post': 'create'}), name="logout"),
+        'login/', views.UserAuthViewSet.as_view({'post': 'login_user'}), name="login"),
+    path('logout/',
+         views.UserAuthViewSet.as_view({'post': 'logout_user'}), name="logout"),
 
-    # 2. User Profile Management (via ProfileViewSet)
+    # User Profile Management (via ProfileViewSet)
     path('profile/',
-         views.ProfileViewSet.as_view({'get': 'retrieve'}), name="user-profile"),
+         views.ProfileViewSet.as_view({'get': 'retrieve_user_profile'}), name="user-profile"),
     path('profile/update/',
-         views.ProfileViewSet.as_view({'put': 'update'}), name="user-profile-update"),
+         views.ProfileViewSet.as_view({'put': 'update_user_profile'}), name="user-profile-update"),
     path('profile/delete/',
-         views.ProfileViewSet.as_view({'delete': 'destroy'}), name="user-delete"),
+         views.ProfileViewSet.as_view({'delete': 'delete_user_profile'}), name="user-delete"),
 
-    # 3. Address Management (via AddressViewSet)
+    # Address Management (via AddressViewSet)
     path('addresses/',
-         views.AddressViewSet.as_view({'get': 'list'}), name="address-list"),
+         views.AddressViewSet.as_view({'get': 'list_user_addresses'}), name="address-list"),
     path('addresses/create/',
-         views.AddressViewSet.as_view({'post': 'create'}), name="address-create"),
+         views.AddressViewSet.as_view({'post': 'create_user_address'}), name="address-create"),
     path('addresses/<int:pk>/',
-         views.AddressViewSet.as_view({'get': 'retrieve'}), name="address-detail"),
-    path('addresses/update/<int:pk>/',
-         views.AddressViewSet.as_view({'put': 'update'}), name="address-update"),
-    path('addresses/delete/<int:pk>/',
-         views.AddressViewSet.as_view({'delete': 'destroy'}), name="address-delete"),
+         views.AddressViewSet.as_view({'get': 'retrieve_user_address'}), name="address-detail"),
+    path('addresses/<int:pk>/update/',
+         views.AddressViewSet.as_view({'put': 'update_user_address'}), name="address-update"),
+    path('addresses/<int:pk>/delete/',
+         views.AddressViewSet.as_view({'delete': 'delete_user_address'}), name="address-delete"),
 ]
