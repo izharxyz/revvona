@@ -3,12 +3,12 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
-from rest_framework import permissions, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Address
 from .serializers import (AddressSerializer, ProfileSerializer,
@@ -32,8 +32,45 @@ def error_response(message="Error", details=None, status_code=status.HTTP_400_BA
     }, status=status_code)
 
 
-class UserRegisterView(viewsets.ViewSet):
-    def create(self, request, *args, **kwargs):
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token['username'] = user.username
+        return token
+
+    def validate(self, attrs):
+        try:
+            data = super().validate(attrs)
+            user_data = UserRegisterTokenSerializer(self.user).data
+            data.update(user_data)
+
+            # Add the user object to validated_data
+            data['user'] = self.user  # Ensure user is included
+
+            return data
+
+        except AuthenticationFailed:
+            return error_response("Invalid credentials, please try again.")
+        except User.DoesNotExist:
+            return error_response("User does not exist.")
+        except Exception as e:
+            # Handle any other exceptions
+            return error_response("An error occurred during authentication.", str(e))
+
+
+class UserAuthViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        if self.action == 'logout_user':
+            self.permission_classes = [IsAuthenticated]
+        return super().get_permissions()
+
+    def register_user(self, request, *args, **kwargs):
+        """Register a new user."""
         try:
             data = request.data
             username = data.get("username", "")
@@ -85,72 +122,52 @@ class UserRegisterView(viewsets.ViewSet):
         except Exception as e:
             return error_response("An error occurred while registering the user.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-### Custom Login Token View with Cookie Setup ###
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
+    def login_user(self, request, *args, **kwargs):
+        """Log in a user and set cookies."""
         try:
-            data = super().validate(attrs)
-            user_data = UserRegisterTokenSerializer(self.user).data
-            data.update(user_data)
-            return data
-        except AuthenticationFailed:
-            raise AuthenticationFailed(
-                detail="Invalid credentials, please try again.")
+            # Obtain tokens using the serializer
+            serializer = MyTokenObtainPairSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
 
+            # Retrieve the user from validated data
+            user = serializer.validated_data.get(
+                'user')  # Use get to avoid KeyError
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
 
-class UserLoginView(TokenObtainPairView):
-    serializer_class = MyTokenObtainPairSerializer
+            response = success_response({
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            }, "Login successful.")
 
-    def post(self, request, *args, **kwargs):
-        try:
-            # Call the super class's post method to obtain tokens
-            response = super().post(request, *args, **kwargs)
-
-            # Check if the response was successful
-            if response.status_code == 200:
-                data = response.data
-                access_token = data.get('access')
-                refresh_token = data.get('refresh')
-
-                # Set cookies
-                response.set_cookie(
-                    key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                    value=access_token,
-                    expires=timedelta(days=1),
-                    httponly=True,
-                    secure=settings.SIMPLE_JWT.get(
-                        'AUTH_COOKIE_SECURE', False),
-                    samesite='Lax'
-                )
-                response.set_cookie(
-                    key=settings.SIMPLE_JWT['REFRESH_COOKIE'],
-                    value=refresh_token,
-                    expires=timedelta(days=7),
-                    httponly=True,
-                    secure=settings.SIMPLE_JWT.get(
-                        'AUTH_COOKIE_SECURE', False),
-                    samesite='Lax'
-                )
-
-                # Update response data to include success message and tokens
-                response.data = success_response({
-                    "access_token": access_token,
-                    "refresh_token": refresh_token
-                }, "Login successful.").data
+            # Set cookies
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                value=access_token,
+                expires=timedelta(days=1),
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+                samesite='Lax'
+            )
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['REFRESH_COOKIE'],
+                value=refresh_token,
+                expires=timedelta(days=7),
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
+                samesite='Lax'
+            )
 
             return response
-
         except Exception as e:
-            # Handle unexpected errors
             return error_response("An error occurred during login.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-class UserLogoutView(viewsets.ViewSet):
-    def create(self, request):
+    def logout_user(self, request):
+        """Log out the user by deleting cookies."""
         try:
             response = success_response(
-                {"detail": "Logout successful."}, "Logout successful.")
+                {}, "Logout successful.")
             response.delete_cookie(settings.SIMPLE_JWT['AUTH_COOKIE'])
             response.delete_cookie(settings.SIMPLE_JWT['REFRESH_COOKIE'])
             return response
@@ -159,10 +176,9 @@ class UserLogoutView(viewsets.ViewSet):
 
 
 class ProfileViewSet(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
-    def retrieve(self, request, *args, **kwargs):
-        """Retrieve the current user's profile with addresses."""
+    def retrieve_user_profile(self, request, *args, **kwargs):
         try:
             user = request.user
             serializer = ProfileSerializer(user)
@@ -172,8 +188,7 @@ class ProfileViewSet(viewsets.ViewSet):
         except Exception as e:
             return error_response("An error occurred while retrieving the profile.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def update(self, request, *args, **kwargs):
-        """Update the current user's profile."""
+    def update_user_profile(self, request, *args, **kwargs):
         try:
             user = request.user
             data = request.data
@@ -193,8 +208,7 @@ class ProfileViewSet(viewsets.ViewSet):
         except Exception as e:
             return error_response("An error occurred while updating the profile.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def destroy(self, request, *args, **kwargs):
-        """Delete the current user's account."""
+    def delete_user_profile(self, request, *args, **kwargs):
         try:
             user = request.user
             data = request.data
@@ -211,30 +225,47 @@ class ProfileViewSet(viewsets.ViewSet):
             return error_response("An error occurred while deleting the user account.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-### Address Viewset (CRUD Operations) ###
 class AddressViewSet(viewsets.ModelViewSet):
     queryset = Address.objects.all()
     serializer_class = AddressSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
 
-    def destroy(self, request, *args, **kwargs):
+    def create_user_address(self, request, *args, **kwargs):
         try:
-            address = self.get_object()
+            data = request.data
+            data['user'] = request.user.id  # Set the user field automatically
+            serializer = self.get_serializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return success_response(serializer.data, "Address successfully created.", status.HTTP_201_CREATED)
+            else:
+                return error_response("Invalid data.", serializer.errors, status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return error_response("An error occurred while creating the address.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def list_user_addresses(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return success_response(serializer.data, "Addresses retrieved successfully.")
+
+    def retrieve_user_address(self, request, *args, **kwargs):
+        try:
+            address = self.get_object()  # This will look up by primary key
             if address.user != request.user:
-                return error_response("You don't have permission to delete this address.", status.HTTP_403_FORBIDDEN)
-            address.delete()
-            return success_response(None, "Address successfully deleted.", status.HTTP_204_NO_CONTENT)
+                return error_response("You don't have permission to view this address.", status.HTTP_403_FORBIDDEN)
+            serializer = self.get_serializer(address)
+            return success_response(serializer.data, "Address retrieved successfully.")
         except Address.DoesNotExist:
             return error_response("Address not found.", status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return error_response("An error occurred while deleting the address.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return error_response("An error occurred while retrieving the address.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def update(self, request, *args, **kwargs):
+    def update_user_address(self, request, *args, **kwargs):
         try:
-            address = self.get_object()
+            address = self.get_object()  # This will look up by primary key
             if address.user != request.user:
                 return error_response("You don't have permission to edit this address.", status.HTTP_403_FORBIDDEN)
 
@@ -249,3 +280,15 @@ class AddressViewSet(viewsets.ModelViewSet):
             return error_response("Address not found.", status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return error_response("An error occurred while updating the address.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete_user_address(self, request, *args, **kwargs):
+        try:
+            address = self.get_object()  # This will look up by primary key
+            if address.user != request.user:
+                return error_response("You don't have permission to delete this address.", status.HTTP_403_FORBIDDEN)
+            address.delete()
+            return success_response(None, "Address successfully deleted.", status.HTTP_204_NO_CONTENT)
+        except Address.DoesNotExist:
+            return error_response("Address not found.", status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while deleting the address.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
