@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from products.models import Product
 from products.serializers import ProductSerializer
 
 from .models import Cart, CartItem
@@ -16,16 +17,17 @@ class CartItemSerializer(serializers.ModelSerializer):
             'quantity': {'min_value': 1}
         }
 
-
-class AddCartItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CartItem
-        fields = ['product', 'quantity']
-
     def validate(self, data):
-        product = data['product']
-        if product.stock < data['quantity']:
-            raise serializers.ValidationError('Not enough stock available')
+        product = self.instance.product if self.instance else Product.objects.get(
+            id=self.initial_data.get('product'))
+
+        if isinstance(product, int):
+            product = Product.objects.get(id=product)
+
+        if data["quantity"] > product.stock:
+            raise serializers.ValidationError({
+                "stock_error": "Requested quantity exceeds available stock"})
+
         return data
 
 
