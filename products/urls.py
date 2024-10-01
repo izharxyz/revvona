@@ -16,9 +16,9 @@ urlpatterns = [
          views.ReviewViewSet.as_view({'post': 'create_review'}), name="review-create"),
     path('reviews/<int:pk>/',
          views.ReviewViewSet.as_view({'get': 'retrieve_review'}), name="review-detail"),
-    path('reviews/update/<int:pk>/',
+    path('reviews/<int:pk>/update/',
          views.ReviewViewSet.as_view({'put': 'update_review'}), name="review-update"),
-    path('reviews/delete/<int:pk>/',
+    path('reviews/<int:pk>/delete/',
          views.ReviewViewSet.as_view({'delete': 'delete_review'}), name="review-delete"),
 
     # Category Management
