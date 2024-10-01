@@ -1,25 +1,37 @@
 from django.urls import path
 
-from .views import (CategoryListView, FeaturedCategoryListView,
-                    ProductByCategoryView, ProductDetailView, ProductListView,
-                    ProductReviewListView, ReviewCreateView, ReviewDeleteView,
-                    ReviewUpdateView)
+from . import views
 
 urlpatterns = [
-    path('products/', ProductListView.as_view(), name='products'),
-    path('products/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
-    path('products/<int:pk>/reviews/',
-         ProductReviewListView.as_view(), name='product-reviews'),
+    # Product Management
+    path('products/',
+         views.ProductViewSet.as_view({'get': 'list'}), name="product-list"),
+    path('products/<int:pk>/',
+         views.ProductViewSet.as_view({'get': 'retrieve'}), name="product-detail"),
+    path('products/<int:product_id>/reviews/',
+         views.ReviewViewSet.as_view({'get': 'list'}), name="review-list"),
 
-    path('categories/', CategoryListView.as_view(), name='category-list'),
-    path('categories/featured/', FeaturedCategoryListView.as_view(),
-         name='featured-categories'),
-    path('categories/<slug:category_slug>/',
-         ProductByCategoryView.as_view(), name='products-by-category'),
+    # Review Management
+    path('reviews/create/',
+         views.ReviewViewSet.as_view({'post': 'create'}), name="review-create"),
+    path('reviews/<int:pk>/',
+         views.ReviewViewSet.as_view({'get': 'retrieve'}), name="review-detail"),
+    path('reviews/update/<int:pk>/',
+         views.ReviewViewSet.as_view({'put': 'update'}), name="review-update"),
+    path('reviews/delete/<int:pk>/',
+         views.ReviewViewSet.as_view({'delete': 'destroy'}), name="review-delete"),
 
-    path('review/create/', ReviewCreateView.as_view(), name='create-review'),
-    path('review/<int:pk>/update/',
-         ReviewUpdateView.as_view(), name='update-review'),
-    path('review/<int:pk>/delete/',
-         ReviewDeleteView.as_view(), name='delete-review'),
+    # Category Management
+    path('categories/',
+         views.CategoryViewSet.as_view({'get': 'list'}), name="category-list"),
+    path('categories/<int:pk>/',
+         views.CategoryViewSet.as_view({'get': 'retrieve'}), name="category-detail"),
+
+    # Featured Categories
+    path('categories/featured/',
+         views.CategoryViewSet.as_view({'get': 'featured'}), name="featured-category-list"),
+
+    # Products by Category
+    path('categories/<slug:category_slug>/products/',
+         views.CategoryViewSet.as_view({'get': 'products'}), name="products-by-category"),
 ]
