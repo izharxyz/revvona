@@ -24,13 +24,12 @@ def error_response(message="Error", details=None, status_code=status.HTTP_400_BA
         "details": details
     }, status=status_code)
 
-# Combined Product ViewSet for listing and detail
 
-
+# Product ViewSet
 class ProductViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
-    def list(self, request):
+    def list_products(self, request):
         limit = request.query_params.get('limit')
         skip = request.query_params.get('skip')
         queryset = Product.objects.all()
@@ -57,7 +56,7 @@ class ProductViewSet(viewsets.ViewSet):
         serializer = ProductSerializer(queryset, many=True)
         return success_response(serializer.data)
 
-    def retrieve(self, request, pk=None):
+    def retrieve_product(self, request, pk=None):
         try:
             product = Product.objects.get(pk=pk)
             serializer = ProductSerializer(product)
@@ -65,22 +64,21 @@ class ProductViewSet(viewsets.ViewSet):
         except Product.DoesNotExist:
             return error_response("Product not found.", status_code=status.HTTP_404_NOT_FOUND)
 
-# Combined Review ViewSet for create, update, and delete
 
-
+# Review ViewSet
 class ReviewViewSet(viewsets.ViewSet):
 
     def get_permissions(self):
         """
         Allow anyone to list reviews, but require authentication for other actions.
         """
-        if self.action == 'list':
+        if self.action == 'list_reviews':
             self.permission_classes = [AllowAny]
         else:
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
 
-    def list(self, request, product_id=None):
+    def list_reviews(self, request, product_id=None):
         try:
             product = Product.objects.get(pk=product_id)
         except Product.DoesNotExist:
@@ -104,7 +102,7 @@ class ReviewViewSet(viewsets.ViewSet):
             'reviews': serializer.data
         })
 
-    def create(self, request):
+    def create_review(self, request):
         product_id = request.data.get('product_id')
         if not product_id:
             return error_response('Product ID is required to create a review.')
@@ -123,7 +121,7 @@ class ReviewViewSet(viewsets.ViewSet):
             return success_response(serializer.data, "Review created successfully.", status_code=status.HTTP_201_CREATED)
         return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
 
-    def update(self, request, pk=None):
+    def update_review(self, request, pk=None):
         try:
             review = Review.objects.get(pk=pk, user=request.user)
         except Review.DoesNotExist:
@@ -135,7 +133,7 @@ class ReviewViewSet(viewsets.ViewSet):
             return success_response(serializer.data, "Review updated successfully.")
         return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
 
-    def destroy(self, request, pk=None):
+    def delete_review(self, request, pk=None):
         try:
             review = Review.objects.get(pk=pk, user=request.user)
             review.delete()
@@ -143,13 +141,12 @@ class ReviewViewSet(viewsets.ViewSet):
         except Review.DoesNotExist:
             return error_response("Review not found or you do not have permission to delete it.", status_code=status.HTTP_404_NOT_FOUND)
 
-# Combined Category ViewSet for listing categories and featured categories
 
-
+# Category ViewSet
 class CategoryViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
-    def list(self, request):
+    def list_categories(self, request):
         queryset = Category.objects.all()
         if not queryset.exists():
             return error_response("No categories found.", status_code=status.HTTP_404_NOT_FOUND)
@@ -157,7 +154,7 @@ class CategoryViewSet(viewsets.ViewSet):
         serializer = CategorySerializer(queryset, many=True)
         return success_response(serializer.data)
 
-    def featured(self, request):
+    def list_featured_categories(self, request):
         queryset = Category.objects.filter(featured=True)
         if not queryset.exists():
             return error_response("No featured categories found.", status_code=status.HTTP_404_NOT_FOUND)
@@ -165,8 +162,7 @@ class CategoryViewSet(viewsets.ViewSet):
         serializer = CategorySerializer(queryset, many=True)
         return success_response(serializer.data)
 
-    # Retrieve products by category slug
-    def products(self, request, category_slug=None):
+    def list_products_by_category(self, request, category_slug=None):
         try:
             category = Category.objects.get(slug=category_slug)
             queryset = Product.objects.filter(category=category)

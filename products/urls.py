@@ -5,33 +5,27 @@ from . import views
 urlpatterns = [
     # Product Management
     path('products/',
-         views.ProductViewSet.as_view({'get': 'list'}), name="product-list"),
+         views.ProductViewSet.as_view({'get': 'list_products'}), name="product-list"),
     path('products/<int:pk>/',
-         views.ProductViewSet.as_view({'get': 'retrieve'}), name="product-detail"),
+         views.ProductViewSet.as_view({'get': 'retrieve_product'}), name="product-detail"),
     path('products/<int:product_id>/reviews/',
-         views.ReviewViewSet.as_view({'get': 'list'}), name="review-list"),
+         views.ReviewViewSet.as_view({'get': 'list_reviews'}), name="review-list"),
 
     # Review Management
     path('reviews/create/',
-         views.ReviewViewSet.as_view({'post': 'create'}), name="review-create"),
+         views.ReviewViewSet.as_view({'post': 'create_review'}), name="review-create"),
     path('reviews/<int:pk>/',
-         views.ReviewViewSet.as_view({'get': 'retrieve'}), name="review-detail"),
+         views.ReviewViewSet.as_view({'get': 'retrieve_review'}), name="review-detail"),
     path('reviews/update/<int:pk>/',
-         views.ReviewViewSet.as_view({'put': 'update'}), name="review-update"),
+         views.ReviewViewSet.as_view({'put': 'update_review'}), name="review-update"),
     path('reviews/delete/<int:pk>/',
-         views.ReviewViewSet.as_view({'delete': 'destroy'}), name="review-delete"),
+         views.ReviewViewSet.as_view({'delete': 'delete_review'}), name="review-delete"),
 
     # Category Management
     path('categories/',
-         views.CategoryViewSet.as_view({'get': 'list'}), name="category-list"),
-    path('categories/<int:pk>/',
-         views.CategoryViewSet.as_view({'get': 'retrieve'}), name="category-detail"),
-
-    # Featured Categories
+         views.CategoryViewSet.as_view({'get': 'list_categories'}), name="category-list"),
     path('categories/featured/',
-         views.CategoryViewSet.as_view({'get': 'featured'}), name="featured-category-list"),
-
-    # Products by Category
+         views.CategoryViewSet.as_view({'get': 'list_featured_categories'}), name="featured-category-list"),
     path('categories/<slug:category_slug>/products/',
-         views.CategoryViewSet.as_view({'get': 'products'}), name="products-by-category"),
+         views.CategoryViewSet.as_view({'get': 'list_products_by_category'}), name="products-by-category"),
 ]
