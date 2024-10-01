@@ -1,5 +1,6 @@
-from rest_framework import permissions, status, viewsets
-from rest_framework.exceptions import NotFound, ValidationError
+from django.db.models import QuerySet
+from rest_framework import status, viewsets
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -25,36 +26,43 @@ def error_response(message="Error", details=None, status_code=status.HTTP_400_BA
     }, status=status_code)
 
 
+# Pagination Class
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def paginate_queryset(self, queryset: QuerySet, request, view=None):
+        if queryset.ordered is False:
+            queryset = queryset.order_by('-created_at')
+
+        return super().paginate_queryset(queryset, request, view)
+
+
 # Product ViewSet
 class ProductViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
+    pagination_class = CustomPagination  # Use custom pagination class
 
     def list_products(self, request):
-        limit = request.query_params.get('limit')
-        skip = request.query_params.get('skip')
-        queryset = Product.objects.all()
+        try:
+            queryset = Product.objects.all()
+            paginator = CustomPagination()
+            paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-        # Apply skip parameter (offset)
-        if skip is not None:
-            try:
-                skip = int(skip)
-                queryset = queryset[skip:]
-            except ValueError:
-                return error_response("Invalid skip value. It must be an integer.", status_code=status.HTTP_400_BAD_REQUEST)
+            if not paginated_queryset:
+                return error_response("No products found.", status_code=status.HTTP_404_NOT_FOUND)
 
-        # Apply limit parameter
-        if limit is not None:
-            try:
-                limit = int(limit)
-                queryset = queryset[:limit]
-            except ValueError:
-                return error_response("Invalid limit value. It must be an integer.", status_code=status.HTTP_400_BAD_REQUEST)
+            serializer = ProductSerializer(paginated_queryset, many=True)
+            return success_response({
+                "results": serializer.data,
+                "count": paginator.page.paginator.count,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link()
+            })
 
-        if not queryset.exists():
-            return error_response("No products found.", status_code=status.HTTP_404_NOT_FOUND)
-
-        serializer = ProductSerializer(queryset, many=True)
-        return success_response(serializer.data)
+        except Exception as e:
+            return error_response("An error occurred while listing products.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def retrieve_product(self, request, pk=None):
         try:
@@ -62,11 +70,14 @@ class ProductViewSet(viewsets.ViewSet):
             serializer = ProductSerializer(product)
             return success_response(serializer.data)
         except Product.DoesNotExist:
-            return error_response("Product not found.", status_code=status.HTTP_404_NOT_FOUND)
+            return error_response("Product not found.", status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while retrieving the product.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Review ViewSet
 class ReviewViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
         """
@@ -74,121 +85,144 @@ class ReviewViewSet(viewsets.ViewSet):
         """
         if self.action == 'list_reviews':
             self.permission_classes = [AllowAny]
-        else:
-            self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
 
     def list_reviews(self, request, product_id=None):
         try:
             product = Product.objects.get(pk=product_id)
+            queryset = Review.objects.filter(
+                product=product).order_by('-created_at')
+            paginator = CustomPagination()
+            paginated_queryset = paginator.paginate_queryset(queryset, request)
+
+            serializer = ReviewSerializer(paginated_queryset, many=True)
+            return success_response({
+                "products": serializer.data,
+                "count": paginator.page.paginator.count,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link()
+            })
+
         except Product.DoesNotExist:
-            return error_response('Product not found.', status_code=status.HTTP_404_NOT_FOUND)
-
-        limit = request.query_params.get('limit', 5)
-        skip = request.query_params.get('skip', 0)
-
-        try:
-            limit = int(limit)
-            skip = int(skip)
-        except ValueError:
-            return error_response('Invalid limit or skip parameter. Must be integers.')
-
-        queryset = Review.objects.filter(product=product).order_by(
-            '-created_at')[skip:skip + limit]
-        serializer = ReviewSerializer(queryset, many=True)
-
-        return success_response({
-            'count': Review.objects.filter(product_id=product_id).count(),
-            'reviews': serializer.data
-        })
+            return error_response('Product not found.', status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while listing reviews.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def create_review(self, request):
-        product_id = request.data.get('product_id')
-        if not product_id:
-            return error_response('Product ID is required to create a review.')
-
         try:
+            product_id = request.data.get('product_id')
+            if not product_id:
+                return error_response('Product ID is required to create a review.')
+
             product = Product.objects.get(id=product_id)
+
+            if Review.objects.filter(product=product, user=request.user).exists():
+                return error_response('You have already reviewed this product.')
+
+            serializer = ReviewSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(user=request.user, product=product)
+                return success_response(serializer.data, "Review created successfully.", status_code=status.HTTP_201_CREATED)
+
+            return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+
         except Product.DoesNotExist:
-            return error_response('Product not found.')
-
-        if Review.objects.filter(product=product, user=request.user).exists():
-            return error_response('You have already reviewed this product.')
-
-        serializer = ReviewSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user, product=product)
-            return success_response(serializer.data, "Review created successfully.", status_code=status.HTTP_201_CREATED)
-        return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            return error_response('Product not found.', status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while creating the review.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update_review(self, request, pk=None):
         try:
             review = Review.objects.get(pk=pk, user=request.user)
-        except Review.DoesNotExist:
-            return error_response("Review not found or you do not have permission to update it.", status_code=status.HTTP_404_NOT_FOUND)
+            serializer = ReviewSerializer(review, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return success_response(serializer.data, "Review updated successfully.")
 
-        serializer = ReviewSerializer(review, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return success_response(serializer.data, "Review updated successfully.")
-        return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+
+        except Review.DoesNotExist:
+            return error_response("Review not found or you do not have permission to update it.", status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while updating the review.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete_review(self, request, pk=None):
         try:
             review = Review.objects.get(pk=pk, user=request.user)
             review.delete()
             return success_response(None, "Review deleted successfully.", status_code=status.HTTP_204_NO_CONTENT)
+
         except Review.DoesNotExist:
-            return error_response("Review not found or you do not have permission to delete it.", status_code=status.HTTP_404_NOT_FOUND)
+            return error_response("Review not found or you do not have permission to delete it.", status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while deleting the review.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Category ViewSet
 class CategoryViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
+    pagination_class = CustomPagination  # Use custom pagination class
 
     def list_categories(self, request):
-        queryset = Category.objects.all()
-        if not queryset.exists():
-            return error_response("No categories found.", status_code=status.HTTP_404_NOT_FOUND)
+        try:
+            queryset = Category.objects.all()
+            paginator = CustomPagination()
+            paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-        serializer = CategorySerializer(queryset, many=True)
-        return success_response(serializer.data)
+            if not paginated_queryset:
+                return error_response("No categories found.", status_code=status.HTTP_404_NOT_FOUND)
+
+            serializer = CategorySerializer(paginated_queryset, many=True)
+            return success_response({
+                "categories": serializer.data,
+                "count": paginator.page.paginator.count,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link()
+            })
+
+        except Exception as e:
+            return error_response("An error occurred while listing categories.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def list_featured_categories(self, request):
-        queryset = Category.objects.filter(featured=True)
-        if not queryset.exists():
-            return error_response("No featured categories found.", status_code=status.HTTP_404_NOT_FOUND)
+        try:
+            queryset = Category.objects.filter(featured=True)
+            paginator = CustomPagination()
+            paginated_queryset = paginator.paginate_queryset(queryset, request)
 
-        serializer = CategorySerializer(queryset, many=True)
-        return success_response(serializer.data)
+            if not paginated_queryset:
+                return error_response("No featured categories found.", status_code=status.HTTP_404_NOT_FOUND)
+
+            serializer = CategorySerializer(paginated_queryset, many=True)
+            return success_response({
+                "categories": serializer.data,
+                "count": paginator.page.paginator.count,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link()
+            })
+
+        except Exception as e:
+            return error_response("An error occurred while listing featured categories.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def list_products_by_category(self, request, category_slug=None):
         try:
             category = Category.objects.get(slug=category_slug)
             queryset = Product.objects.filter(category=category)
 
-            if not queryset.exists():
+            paginator = CustomPagination()
+            paginated_queryset = paginator.paginate_queryset(queryset, request)
+
+            if not paginated_queryset:
                 return error_response("No products found in this category.", status_code=status.HTTP_404_NOT_FOUND)
 
-            # Get limit and skip from request parameters, with defaults
-            limit = request.query_params.get('limit', 10)
-            skip = request.query_params.get('skip', 0)
-
-            try:
-                limit = int(limit)
-                skip = int(skip)
-            except ValueError:
-                return error_response("Invalid limit or skip parameter. Must be integers.")
-
-            # Paginate the queryset
-            paginated_queryset = queryset[skip:skip + limit]
-
             serializer = ProductSerializer(paginated_queryset, many=True)
-
             return success_response({
-                "count": queryset.count(),  # Total products in the category
-                "products": serializer.data
+                "products": serializer.data,
+                "count": paginator.page.paginator.count,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link()
             })
 
         except Category.DoesNotExist:
-            return error_response("Category not found.", status_code=status.HTTP_404_NOT_FOUND)
+            return error_response("Category not found.", status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while listing products by category.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
