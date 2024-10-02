@@ -8,11 +8,13 @@ urlpatterns = [
          views.ProductViewSet.as_view({'get': 'list_products'}), name="product-list"),
     path('products/<int:pk>/',
          views.ProductViewSet.as_view({'get': 'retrieve_product'}), name="product-detail"),
+
+    # Product Reviews
     path('products/<int:product_id>/reviews/',
          views.ReviewViewSet.as_view({'get': 'list_reviews'}), name="review-list"),
 
     # Review Management
-    path('reviews/create/',
+    path('products/<int:product_id>/reviews/create/',
          views.ReviewViewSet.as_view({'post': 'create_review'}), name="review-create"),
     path('reviews/<int:pk>/',
          views.ReviewViewSet.as_view({'get': 'retrieve_review'}), name="review-detail"),
