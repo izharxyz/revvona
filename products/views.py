@@ -55,7 +55,7 @@ class ProductViewSet(viewsets.ViewSet):
 
             serializer = ProductSerializer(paginated_queryset, many=True)
             return success_response({
-                "results": serializer.data,
+                "products": serializer.data,
                 "count": paginator.page.paginator.count,
                 "next": paginator.get_next_link(),
                 "previous": paginator.get_previous_link()
@@ -70,7 +70,7 @@ class ProductViewSet(viewsets.ViewSet):
             serializer = ProductSerializer(product)
             return success_response(serializer.data)
         except Product.DoesNotExist:
-            return error_response("Product not found.", status=status.HTTP_404_NOT_FOUND)
+            return error_response("Product not found.", status_code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return error_response("An error occurred while retrieving the product.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -97,24 +97,24 @@ class ReviewViewSet(viewsets.ViewSet):
 
             serializer = ReviewSerializer(paginated_queryset, many=True)
             return success_response({
-                "products": serializer.data,
+                "reviews": serializer.data,
                 "count": paginator.page.paginator.count,
                 "next": paginator.get_next_link(),
                 "previous": paginator.get_previous_link()
             })
 
         except Product.DoesNotExist:
-            return error_response('Product not found.', status=status.HTTP_404_NOT_FOUND)
+            return error_response('Product not found.', status_code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return error_response("An error occurred while listing reviews.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def create_review(self, request):
+    def create_review(self, request, product_id=None):
         try:
-            product_id = request.data.get('product_id')
-            if not product_id:
-                return error_response('Product ID is required to create a review.')
-
             product = Product.objects.get(id=product_id)
+
+            rating = request.data.get('rating')
+            if not rating:
+                return error_response('Rating is required.', "Please provide rating value for this product", status_code=status.HTTP_400_BAD_REQUEST)
 
             if Review.objects.filter(product=product, user=request.user).exists():
                 return error_response('You have already reviewed this product.')
@@ -127,7 +127,7 @@ class ReviewViewSet(viewsets.ViewSet):
             return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
 
         except Product.DoesNotExist:
-            return error_response('Product not found.', status=status.HTTP_404_NOT_FOUND)
+            return error_response('Product not found.', status_code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return error_response("An error occurred while creating the review.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -142,7 +142,7 @@ class ReviewViewSet(viewsets.ViewSet):
             return error_response("Invalid data.", serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
 
         except Review.DoesNotExist:
-            return error_response("Review not found or you do not have permission to update it.", status=status.HTTP_404_NOT_FOUND)
+            return error_response("Review not found or you do not have permission to update it.", status_code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return error_response("An error occurred while updating the review.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -153,7 +153,7 @@ class ReviewViewSet(viewsets.ViewSet):
             return success_response(None, "Review deleted successfully.", status_code=status.HTTP_204_NO_CONTENT)
 
         except Review.DoesNotExist:
-            return error_response("Review not found or you do not have permission to delete it.", status=status.HTTP_404_NOT_FOUND)
+            return error_response("Review not found or you do not have permission to delete it.", status_code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return error_response("An error occurred while deleting the review.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -223,6 +223,6 @@ class CategoryViewSet(viewsets.ViewSet):
             })
 
         except Category.DoesNotExist:
-            return error_response("Category not found.", status=status.HTTP_404_NOT_FOUND)
+            return error_response("Category not found.", status_code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return error_response("An error occurred while listing products by category.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
