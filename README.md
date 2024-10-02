@@ -1,3 +1,5 @@
+![Project Screenshot](screenshot.png)
+
 # AGAVI - The Modern eCommerce Platform
 
 This a modern eCommerce platform tailored for small to mid-sized businesses, offering seamless management of products, orders, and categories through a custom Unfold Admin dashboard. Built with Django REST Framework, it includes JWT-based cookie authentication, Razorpay integration for payments, and Cloudinary for media storage. The platform provides consistent API responses, robust error handling, and efficient pagination, all deployed on Vercel with CockroachDB as the database. It delivers an ideal solution for businesses seeking a reliable, maintainable, and scalable online presence.
@@ -21,10 +23,11 @@ Recognizing the gap, I decided to build a solution that not only meets real-worl
     -   [Checkout App](#checkout-app)
 
 -   [License](#license)
+-   [Roadmap](#roadmap)
 
 ## Tech Stack
 
-The project utilizes a variety of modern technologies and services to ensure scalability, maintainability, and performance. Below is a list of key technologies used:
+The project utilizes a variety of modern technologies and services to ensure scalability, maintainability, nad performance. Below is a list of key technologies used and **ALL OF THEM ARE EITHER FREE OR HAVE GREAT FREE TIER**:
 
 -   [**Django REST Framework**](https://www.django-rest-framework.org/) - A powerful toolkit for building Web APIs in Django.
 -   [**Unfold Admin**](https://unfoldadmin.com/) - A package for customizing the Django admin interface with enhanced UX and UI.
@@ -142,11 +145,11 @@ The application leverages the powerful **django-unfold** package to deliver an i
 
 -   The project takes advantage of Django REST Framework\u2019s ViewSets, which provide a structured and maintainable way to handle API endpoints. ViewSets minimize code redundancy by automatically routing requests to the appropriate view methods based on HTTP methods, making it easier to scale and extend the application.
 
-# API Documentation
+## API Documentation
 
 This documentation provides an overview of the API endpoints for the application, categorized by functionality. The API follows RESTful principles and is organized into various sections. Each section contains a list of endpoints, along with their descriptions, request bodies, and responses.
 
-## _Table of Contents_
+### _Table of Contents_
 
 -   #### [_Accounts App_](#accounts-app)
 
@@ -670,3 +673,20 @@ This documentation provides an overview of the API endpoints for the application
 ## License
 
 This project is licensed under the slightly modified MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Roadmap
+
+-   [x] Initial project setup
+-   [x] User authentication and authorization
+-   [x] Product and category management
+-   [x] Cart and order management
+-   [x] Payment integration with Razorpay
+-   [x] Cloudinary integration for media storage
+-   [x] Custom Unfold Admin dashboard
+-   [x] API documentation
+-   [ ] Email notifications
+-   [ ] Oauth2 authentication
+-   [ ] Automated tests
+-   [ ] Scalability improvements
+-   [ ] Additional payment gateways
+-   [ ] Performance optimization
