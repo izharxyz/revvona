@@ -15,12 +15,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('ENV') != 'PROD'
 
-ALLOWED_HOSTS = [
-    os.getenv('ALLOWED_HOST'),
-    'agavi.in',
-    '.cloudflarestorage.com',
-    '.vercel.app',
-]
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',') or []
 
 INSTALLED_APPS = [
     'unfold',
