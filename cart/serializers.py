@@ -12,23 +12,34 @@ class CartItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
         fields = ['id', 'product', 'quantity']
-        extra_kwargs = {
-            # Ensure quantity is always at least 1
-            'quantity': {'min_value': 1}
-        }
 
     def validate(self, data):
+        # Get the product instance
         product = self.instance.product if self.instance else Product.objects.get(
             id=self.initial_data.get('product'))
 
-        if isinstance(product, int):
-            product = Product.objects.get(id=product)
+        # Set default quantity if not provided
+        quantity = data.get('quantity', 1)  # Default to 1 if not provided
+        # Ensure quantity is in data for further validation
+        data['quantity'] = quantity
 
-        if data["quantity"] > product.stock:
+        if quantity > product.stock:
             raise serializers.ValidationError({
                 "stock_error": "Requested quantity exceeds available stock"})
 
         return data
+
+    def create(self, validated_data):
+        # If quantity is not in the validated data, set it to the default
+        quantity = validated_data.get('quantity', 1)
+        validated_data['quantity'] = quantity
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # If quantity is not in the validated data, set it to the default
+        quantity = validated_data.get('quantity', 1)
+        validated_data['quantity'] = quantity
+        return super().update(instance, validated_data)
 
 
 class CartSerializer(serializers.ModelSerializer):
