@@ -1,6 +1,7 @@
 import razorpay
 from django.conf import settings
 from rest_framework import status, viewsets
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -8,8 +9,7 @@ from accounts.models import Address
 from cart.models import CartItem
 
 from .models import Order, OrderItem, Payment
-from .serializers import (OrderItemSerializer, OrderSerializer,
-                          PaymentSerializer)
+from .serializers import OrderSerializer, PaymentSerializer
 
 
 ### Helper Functions for Consistent Responses ###
@@ -27,6 +27,17 @@ def error_response(message="Error", details=None, status_code=status.HTTP_400_BA
         "message": message,
         "details": details
     }, status=status_code)
+
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if not queryset.ordered:
+            queryset = queryset.order_by('-created_at')
+        return super().paginate_queryset(queryset, request, view)
 
 
 class OrderViewSet(viewsets.ViewSet):
@@ -79,8 +90,20 @@ class OrderViewSet(viewsets.ViewSet):
     def list_orders(self, request):
         try:
             orders = Order.objects.filter(user=request.user)
-            serializer = OrderSerializer(orders, many=True)
-            return success_response(serializer.data, "Orders retrieved successfully")
+            paginator = CustomPagination()
+            paginated_orders = paginator.paginate_queryset(orders, request)
+
+            if paginated_orders is None:
+                return error_response("No orders found", status_code=status.HTTP_404_NOT_FOUND)
+
+            serializer = OrderSerializer(paginated_orders, many=True)
+            return success_response({
+                "orders": serializer.data,
+                "count": paginator.page.paginator.count,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link()
+            }, message="Orders retrieved successfully")
+
         except Exception as e:
             return error_response("An error occurred while fetching orders.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -95,18 +118,77 @@ class OrderViewSet(viewsets.ViewSet):
             return error_response("An error occurred while fetching the order.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update_order(self, request, pk=None):
+        """Update only the shipping address of an order if it's confirmed."""
         try:
             order = Order.objects.get(pk=pk, user=request.user)
-            serializer = OrderSerializer(
-                order, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return success_response(serializer.data, "Order updated successfully")
-            return error_response("Invalid data", serializer.errors)
+
+            # Check if the order is already cancelled, delivered, or returned
+            if order.status != 'confirmed':
+                return error_response("Oreder not eligible for updating", status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Ensure only the shipping address is being updated
+            if 'shipping_address' not in request.data or 'billing_address' in request.data:
+                return error_response("Only the shipping address can be updated.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Update shipping address
+            shipping_address_id = request.data.get('shipping_address')
+            try:
+                shipping_address = Address.objects.get(
+                    id=shipping_address_id, user=request.user)
+            except Address.DoesNotExist:
+                return error_response("Invalid shipping address.", status_code=status.HTTP_404_NOT_FOUND)
+
+            order.shipping_address = shipping_address
+            order.save()
+
+            serializer = OrderSerializer(order)
+            return success_response(serializer.data, "Shipping address updated successfully.")
         except Order.DoesNotExist:
-            return error_response("Order not found", status_code=status.HTTP_404_NOT_FOUND)
+            return error_response("Order not found.", status_code=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return error_response("An error occurred while updating the order.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def cancel_order(self, request, pk=None):
+        """Cancel an order by setting its status to 'cancelled'."""
+        try:
+            order = Order.objects.get(pk=pk, user=request.user)
+
+            if order.status != 'confirmed':
+                return error_response("Only confirmed orders can be cancelled.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Set the order status to 'cancelled'
+            order.status = 'cancelled'
+            order.save()
+
+            return success_response(None, "Order has been cancelled.", status_code=status.HTTP_200_OK)
+        except Order.DoesNotExist:
+            return error_response("Order not found.", status_code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while cancelling the order.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def return_order(self, request, pk=None):
+        """Return an order by setting its status to 'returned'."""
+        try:
+            order = Order.objects.get(pk=pk, user=request.user)
+
+            # Check if the order is already returned
+            if order.status == 'returned':
+                return error_response("Order is already returned.", status_code=status.HTTP_400_BAD_REQUEST)
+            if order.status == 'return_initiated':
+                return error_response("Order return procedure is already initiated.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Check if the order has been delivered before allowing a return
+            if order.status != 'delivered':
+                return error_response("Only delivered orders can be returned.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            order.status = 'return_initiated'
+            order.save()
+
+            return success_response(None, "Order return procedure initiated successfully", status_code=status.HTTP_200_OK)
+        except Order.DoesNotExist:
+            return error_response("Order not found.", status_code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred while returning the order.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PaymentViewSet(viewsets.ViewSet):
@@ -118,8 +200,14 @@ class PaymentViewSet(viewsets.ViewSet):
             order_id = request.data.get('order')
             payment_method = request.data.get('method')
 
+            if not order_id or not payment_method:
+                return error_response("Order ID and payment method (cod or razorpay) are required.", status_code=status.HTTP_400_BAD_REQUEST)
+
             try:
                 order = Order.objects.get(id=order_id, user=user)
+                if order.status != 'pending':
+                    return error_response("Order not eligible for payment", status_code=status.HTTP_400_BAD_REQUEST)
+
             except Order.DoesNotExist:
                 return error_response("Order not found or unauthorized", status_code=status.HTTP_404_NOT_FOUND)
 
