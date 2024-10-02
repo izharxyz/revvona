@@ -10,6 +10,8 @@ class Order(models.Model):
         ('confirmed', 'Confirmed'),
         ('delivered', 'Delivered'),
         ('cancelled', 'Cancelled'),
+        ('return_initiated', 'Return Initiated'),
+        ('returned', 'Returned'),
     ]
 
     user = models.ForeignKey(
