@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
 from rest_framework import status, viewsets
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -30,6 +31,17 @@ def error_response(message="Error", details=None, status_code=status.HTTP_400_BA
         "message": message,
         "details": details
     }, status=status_code)
+
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if not queryset.ordered:
+            queryset = queryset.order_by('-created_at')
+        return super().paginate_queryset(queryset, request, view)
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -72,6 +84,9 @@ class UserAuthViewSet(viewsets.ViewSet):
     def register_user(self, request, *args, **kwargs):
         """Register a new user."""
         try:
+            if request.user.is_authenticated:
+                return error_response("User already logged in.", f"{request.user}, you are already logged in.", status_code=status.HTTP_403_FORBIDDEN)
+
             data = request.data
             username = data.get("username", "")
             email = data.get("email", "")
@@ -125,6 +140,8 @@ class UserAuthViewSet(viewsets.ViewSet):
     def login_user(self, request, *args, **kwargs):
         """Log in a user and set cookies."""
         try:
+            if request.user.is_authenticated:
+                return error_response("User already logged in.", f"{request.user}, you are already logged in.", status_code=status.HTTP_403_FORBIDDEN)
             # Obtain tokens using the serializer
             serializer = MyTokenObtainPairSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
@@ -132,6 +149,10 @@ class UserAuthViewSet(viewsets.ViewSet):
             # Retrieve the user from validated data
             user = serializer.validated_data.get(
                 'user')  # Use get to avoid KeyError
+
+            if user is None:
+                return error_response("User not found.", status_code=status.HTTP_404_NOT_FOUND)
+
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
@@ -160,6 +181,8 @@ class UserAuthViewSet(viewsets.ViewSet):
             )
 
             return response
+        except AuthenticationFailed:
+            return error_response("Invalid credentials, please try again.")
         except Exception as e:
             return error_response("An error occurred during login.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -248,8 +271,21 @@ class AddressViewSet(viewsets.ModelViewSet):
 
     def list_user_addresses(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return success_response(serializer.data, "Addresses retrieved successfully.")
+
+        paginator = CustomPagination()
+        paginated_addresses = paginator.paginate_queryset(
+            queryset, request, view=self)
+
+        if paginated_addresses is None:
+            return error_response("No addresses found", status_code=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.get_serializer(paginated_addresses, many=True)
+        return success_response({
+            "addresses": serializer.data,
+            "count": paginator.page.paginator.count,
+            "next": paginator.get_next_link(),
+            "previous": paginator.get_previous_link()
+        }, message="Addresses retrieved successfully")
 
     def retrieve_user_address(self, request, *args, **kwargs):
         try:
