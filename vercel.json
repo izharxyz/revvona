@@ -2,7 +2,7 @@
     "regions": ["bom1"],
     "builds": [
         {
-            "src": "agavi/wsgi.py",
+            "src": "revvona/wsgi.py",
             "use": "@vercel/python",
             "config": { "maxLambdaSize": "15mb", "runtime": "python3.12" }
         },
@@ -17,7 +17,7 @@
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "agavi/wsgi.py"
+            "dest": "revvona/wsgi.py"
         }
     ]
 }

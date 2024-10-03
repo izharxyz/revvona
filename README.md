@@ -1,12 +1,8 @@
 ![Project Screenshot](screenshot.png)
 
-# AGAVI - The Modern eCommerce Platform
+<div style="text-align:center; margin-bottom: 20px; color: #84cc16;"><h1>REVVONA</h1></div>
 
-This a modern eCommerce platform tailored for small to mid-sized businesses, offering seamless management of products, orders, and categories through a custom Unfold Admin dashboard. Built with Django REST Framework, it includes JWT-based cookie authentication, Razorpay integration for payments, and Cloudinary for media storage. The platform provides consistent API responses, robust error handling, and efficient pagination, all deployed on Vercel with CockroachDB as the database. It delivers an ideal solution for businesses seeking a reliable, maintainable, and scalable online presence.
-
-## Why I Built This Project?
-
-I developed this eCommerce backend platform after struggling to find a reliable, open-source solution built with Django REST Framework for a freelancing project. Most options were incomplete or poorly structured, with messy function-based views and lacking key features like Cash on Delivery (COD) payments, essential for my region. Many projects were also just tutorial-based, with little real-world application. Seeing this gap, I decided to build a solution that prioritizes clean, maintainable code and meets practical eCommerce needs.
+The modern eCommerce backend platform tailored for small to mid-sized businesses, offering seamless management of products, orders, and categories through a custom Unfold Admin dashboard. Built with Django REST Framework, it includes JWT-based cookie authentication, Razorpay integration for payments, and Cloudinary for media storage. The platform provides consistent API responses, robust error handling, and efficient pagination, all deployed on Vercel with CockroachDB as the database. It delivers an ideal solution for businesses seeking a reliable, maintainable, and scalable online presence.
 
 ## Table of contents
 
@@ -15,10 +11,10 @@ I developed this eCommerce backend platform after struggling to find a reliable,
 -   [Features](#features)
 -   [API Documentation](#api-documentation)
 
-    -   [Accounts App](#accounts-app)
-    -   [Products App](#products-app)
-    -   [Cart App](#cart-app)
-    -   [Checkout App](#checkout-app)
+    -   [Accounts Application](#accounts-application)
+    -   [Products Application](#products-application)
+    -   [Cart Application](#cart-application)
+    -   [Checkout Application](#checkout-application)
 
 -   [License](#license)
 -   [Roadmap](#roadmap)
@@ -38,7 +34,7 @@ The project utilizes a variety of modern technologies and services to ensure sca
 
 -   Clone the repository:
     ```bash
-    git clone https://github.com/0neTrueG0D/agavi-backend.git
+    git clone https://github.com/izharxyz/revvona.git
     ```
 -   Install the dependencies:
     ```bash
@@ -149,7 +145,7 @@ This documentation provides an overview of the API endpoints for the application
 
 ### _Table of Contents_
 
--   #### [_Accounts App_](#accounts-app)
+-   #### [_Accounts Application_](#accounts-app)
 
     -   [**User Registration and Authentication**](#user-registration-and-authentication)
         -   [Register User](#register-user)
@@ -166,7 +162,7 @@ This documentation provides an overview of the API endpoints for the application
         -   [Update User Address](#update-user-address)
         -   [Delete User Address](#delete-user-address)
 
--   #### [_Products App_](#products-app)
+-   #### [_Products Application_](#products-app)
 
     -   [**Product Management**](#product-management)
         -   [List Products](#list-products)
@@ -182,7 +178,7 @@ This documentation provides an overview of the API endpoints for the application
         -   [List Featured Categories](#list-featured-categories)
         -   [List Products by Category](#list-products-by-category)
 
--   #### [_Cart App_](#cart-app)
+-   #### [_Cart Application_](#cart-app)
 
     -   [**Cart Management**](#cart-management)
         -   [Retrieve Cart](#retrieve-cart)
@@ -191,7 +187,7 @@ This documentation provides an overview of the API endpoints for the application
         -   [Remove Cart Item](#remove-cart-item)
         -   [Clear Cart](#clear-cart)
 
--   #### [_Checkout App_](#checkout-app)
+-   #### [_Checkout Application_](#checkout-app)
 
     -   [**Order Management**](#order-management)
         -   [List Orders](#list-orders)

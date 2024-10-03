@@ -55,7 +55,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'agavi.urls'
+ROOT_URLCONF = 'revvona.urls'
 
 TEMPLATES = [
     {
@@ -75,7 +75,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'agavi.wsgi.application'
+WSGI_APPLICATION = 'revvona.wsgi.application'
 
 DATABASES = {
     'default': {
@@ -178,9 +178,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
 UNFOLD = {
-    "SITE_TITLE": _("AGAVI ADMIN"),
-    "SITE_HEADER": _("AGAVI ADMINISTRATION"),
-    "SITE_URL": "https://agavi.in",
+    "SITE_TITLE": _("REVVONA ADMIN"),
+    "SITE_HEADER": _("REVVONA ADMINISTRATION"),
+    # "SITE_URL": "/",
     "SITE_ICON": lambda request: static("icon.png"),
     "SITE_LOGO": lambda request: static("logo.png"),
     "SITE_SYMBOL": "grass",
