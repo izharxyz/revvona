@@ -6,9 +6,7 @@ This a modern eCommerce platform tailored for small to mid-sized businesses, off
 
 ## Why I Built This Project?
 
-I created this eCommerce backend platform after an exhaustive search for a reliable, open-source solution built with Django REST Framework (DRF) for a freelancing project. Unfortunately, what I found was disappointing—most available projects were either outdated, incomplete, or full of poor coding practices. Many relied on function-based views with messy, manual conditionals like if request.method == "POST". Others lacked essential features, such as Cash on Delivery (COD) payments, offering only Stripe, which isn’t supported in my country. Even worse, many were just copy-pasted tutorials with app names like "my_product_app."
-
-Recognizing the gap, I decided to build a solution that not only meets real-world needs but also adheres to clean, maintainable coding standards.
+I developed this eCommerce backend platform after struggling to find a reliable, open-source solution built with Django REST Framework for a freelancing project. Most options were incomplete or poorly structured, with messy function-based views and lacking key features like Cash on Delivery (COD) payments, essential for my region. Many projects were also just tutorial-based, with little real-world application. Seeing this gap, I decided to build a solution that prioritizes clean, maintainable code and meets practical eCommerce needs.
 
 ## Table of contents
 
