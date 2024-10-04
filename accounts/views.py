@@ -1,76 +1,24 @@
-from datetime import timedelta
-
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import status, viewsets
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from revvona.utils import CustomPagination, error_response, success_response
+
 from .models import Address
-from .serializers import (AddressSerializer, ProfileSerializer,
-                          UserRegisterTokenSerializer, UserSerializer)
-
-
-### Helper Functions for Consistent Responses ###
-def success_response(data, message="Success", status_code=status.HTTP_200_OK):
-    return Response({
-        "success": True,
-        "message": message,
-        "data": data
-    }, status=status_code)
-
-
-def error_response(message="Error", details=None, status_code=status.HTTP_400_BAD_REQUEST):
-    return Response({
-        "success": False,
-        "message": message,
-        "details": details
-    }, status=status_code)
-
-
-class CustomPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-    def paginate_queryset(self, queryset, request, view=None):
-        if not queryset.ordered:
-            queryset = queryset.order_by('-created_at')
-        return super().paginate_queryset(queryset, request, view)
-
-
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-
-        # Add custom claims
-        token['username'] = user.username
-        return token
-
-    def validate(self, attrs):
-        try:
-            data = super().validate(attrs)
-            user_data = UserRegisterTokenSerializer(self.user).data
-            data.update(user_data)
-
-            # Add the user object to validated_data
-            data['user'] = self.user  # Ensure user is included
-
-            return data
-
-        except AuthenticationFailed:
-            return error_response("Invalid credentials, please try again.")
-        except User.DoesNotExist:
-            return error_response("User does not exist.")
-        except Exception as e:
-            # Handle any other exceptions
-            return error_response("An error occurred during authentication.", str(e))
+from .serializers import (AddressSerializer, CustomTokenObtainPairSerializer,
+                          ProfileSerializer, UserRegisterTokenSerializer,
+                          UserSerializer)
 
 
 class UserAuthViewSet(viewsets.ViewSet):
@@ -82,10 +30,9 @@ class UserAuthViewSet(viewsets.ViewSet):
         return super().get_permissions()
 
     def register_user(self, request, *args, **kwargs):
-        """Register a new user."""
         try:
             if request.user.is_authenticated:
-                return error_response("User already logged in.", f"{request.user}, you are already logged in.", status_code=status.HTTP_403_FORBIDDEN)
+                return error_response("User already logged in.", "You are already logged in.", status_code=status.HTTP_403_FORBIDDEN)
 
             data = request.data
             username = data.get("username", "")
@@ -104,96 +51,151 @@ class UserAuthViewSet(viewsets.ViewSet):
                 username=username,
                 email=email,
                 password=make_password(data.get("password")),
+                is_active=False  # Set is_active to False initially for email verification
             )
 
-            # Generate tokens and set them as cookies
-            refresh = RefreshToken.for_user(user)
-            access_token = str(refresh.access_token)
-            refresh_token = str(refresh)
+            # Send verification email
+            self.send_verification_email(user)
 
-            response = success_response({
-                "access_token": access_token,
-                "refresh_token": refresh_token
-            }, "User registered successfully", status_code=status.HTTP_201_CREATED)
+            return success_response({"user": user.id}, "User registered successfully. Please verify your email to activate your account.", status_code=status.HTTP_201_CREATED)
 
-            # Set cookies
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=access_token,
-                expires=timedelta(days=1),
-                httponly=True,
-                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
-                samesite='Lax'
-            )
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['REFRESH_COOKIE'],
-                value=refresh_token,
-                expires=timedelta(days=7),
-                httponly=True,
-                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
-                samesite='Lax'
-            )
-            return response
         except Exception as e:
             return error_response("An error occurred while registering the user.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def send_verification_email(self, user):
+        """Send a verification email to the user with a frontend-based verification link."""
+        token = urlsafe_base64_encode(force_bytes(user.pk))  # Encode user ID
+        # Replace with your actual frontend URL
+        frontend_url = f"{
+            settings.FRONTEND_URL}/verify?uid={token}&token={token}"
+
+        subject = "Verify Your Email Address"
+        html_message = render_to_string('verification_email.html', {
+            'token': frontend_url
+        })
+
+        send_mail(
+            subject,
+            "",  # Plain text message can be left empty if only HTML is used
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+            html_message=html_message  # Use the html_message argument for HTML emails
+        )
+
+    def verify_email(self, request):
+        """Verify email with uid and token sent from the frontend."""
+        try:
+            uid = request.GET.get('uid')
+            token = request.GET.get('token')
+
+            if not uid or not token:
+                return error_response("Invalid or missing token.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Decode the uid to get the user ID
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+
+            if user.is_active:
+                return error_response("This account is already verified.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Mark the user as active
+            user.is_active = True
+            user.save(update_fields=['is_active'])
+
+            return success_response({}, "Email verified successfully. You can now log in.", status_code=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return error_response("User does not exist.", status_code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return error_response("An error occurred during email verification.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def login_user(self, request, *args, **kwargs):
-        """Log in a user and set cookies."""
+        """Log in a user using either username or email and password."""
         try:
             if request.user.is_authenticated:
-                return error_response("User already logged in.", f"{request.user}, you are already logged in.", status_code=status.HTTP_403_FORBIDDEN)
-            # Obtain tokens using the serializer
-            serializer = MyTokenObtainPairSerializer(data=request.data)
+                return error_response("User already logged in.", "You are already logged in.", status_code=status.HTTP_403_FORBIDDEN)
+
+            # Extract the username (which could be either username or email) and password from the request
+            username_or_email = request.data.get('username')
+            password = request.data.get('password')
+
+            if not username_or_email or not password:
+                return error_response("Username/Email and password are required.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                # Check if the input is an email
+                validate_email(username_or_email)
+                # If it's a valid email, retrieve the user by email
+                user = User.objects.filter(email=username_or_email).first()
+                if not user:
+                    return error_response("User with this email does not exist.", status_code=status.HTTP_404_NOT_FOUND)
+                username = user.username  # Get the username associated with the email
+            except ValidationError:
+                # If it's not a valid email, treat it as a username
+                username = username_or_email
+                user = User.objects.filter(username=username).first()
+                if not user:
+                    return error_response("User with this username does not exist.", status_code=status.HTTP_404_NOT_FOUND)
+
+            # Now pass the username and password to the serializer
+            serializer = CustomTokenObtainPairSerializer(data={
+                'username': username,
+                'password': password
+            })
             serializer.is_valid(raise_exception=True)
 
-            # Retrieve the user from validated data
-            user = serializer.validated_data.get(
-                'user')  # Use get to avoid KeyError
+            # Update last_login in the view because django doesn't do it automatically when using JWT
+            user = serializer.user
+            user.last_login = timezone.now()
+            user.save(update_fields=['last_login'])
 
-            if user is None:
-                return error_response("User not found.", status_code=status.HTTP_404_NOT_FOUND)
-
+            # Retrieve tokens from the serializer
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
 
+            # Return successful response with tokens
             response = success_response({
+                "id": str(user.id),
+                "username": user.username,
+                "email": user.email,
                 "access_token": access_token,
                 "refresh_token": refresh_token
             }, "Login successful.")
 
-            # Set cookies
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=access_token,
-                expires=timedelta(days=1),
-                httponly=True,
-                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
-                samesite='Lax'
-            )
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['REFRESH_COOKIE'],
-                value=refresh_token,
-                expires=timedelta(days=7),
-                httponly=True,
-                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False),
-                samesite='Lax'
-            )
-
             return response
-        except AuthenticationFailed:
-            return error_response("Invalid credentials, please try again.")
+
+        except AuthenticationFailed as e:
+            return error_response(str(e))
         except Exception as e:
             return error_response("An error occurred during login.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def logout_user(self, request):
-        """Log out the user by deleting cookies."""
+    def refresh_token(self, request, *args, **kwargs):
+        """Handle token refresh using the refresh token."""
         try:
-            response = success_response(
-                {}, "Logout successful.")
-            response.delete_cookie(settings.SIMPLE_JWT['AUTH_COOKIE'])
-            response.delete_cookie(settings.SIMPLE_JWT['REFRESH_COOKIE'])
-            return response
+            refresh_token = request.data.get('refresh_token')
+
+            if not refresh_token:
+                return error_response("Refresh token is required.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                refresh = RefreshToken(refresh_token)
+                access_token = str(refresh.access_token)
+
+                return success_response({
+                    "access_token": access_token,
+                }, "Access token refreshed successfully.")
+            except Exception as e:
+                return error_response("Invalid or expired refresh token.", str(e), status_code=status.HTTP_401_UNAUTHORIZED)
+
+        except Exception as e:
+            return error_response("An error occurred while refreshing the token.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def logout_user(self, request):
+        """Log out the user."""
+        try:
+            # Perform logout logic for JWT-based auth (typically just a client-side action)
+            return success_response({}, "Logout successful.", status_code=status.HTTP_200_OK)
         except Exception as e:
             return error_response("An error occurred during logout.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -216,15 +218,15 @@ class ProfileViewSet(viewsets.ViewSet):
             user = request.user
             data = request.data
 
-            # Update the user's username, email, and optionally the password
+            # Update the user's username, email, first_name, and last_name
             user.username = data.get("username", user.username)
             user.email = data.get("email", user.email)
-
-            if data.get("password"):
-                user.password = make_password(data.get("password"))
+            user.first_name = data.get("first_name", user.first_name)
+            user.last_name = data.get("last_name", user.last_name)
 
             user.save()
-            serializer = UserSerializer(user)
+
+            serializer = ProfileSerializer(user)
             return success_response(serializer.data, "User successfully updated.", status.HTTP_200_OK)
         except User.DoesNotExist:
             return error_response("User not found.", status.HTTP_404_NOT_FOUND)
