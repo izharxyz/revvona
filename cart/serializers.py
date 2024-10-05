@@ -2,11 +2,12 @@ from rest_framework import serializers
 
 from products.models import Product
 from products.serializers import ProductSerializer
+from revvona.utils import CustomSerializer
 
 from .models import Cart, CartItem
 
 
-class CartItemSerializer(serializers.ModelSerializer):
+class CartItemSerializer(CustomSerializer):
     product = ProductSerializer(read_only=True)
 
     class Meta:
@@ -42,7 +43,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class CartSerializer(serializers.ModelSerializer):
+class CartSerializer(CustomSerializer):
     items = CartItemSerializer(many=True, read_only=True)
 
     class Meta:

@@ -7,37 +7,10 @@ from rest_framework.response import Response
 
 from accounts.models import Address
 from cart.models import CartItem
+from revvona.utils import CustomPagination, error_response, success_response
 
 from .models import Order, OrderItem, Payment
 from .serializers import OrderSerializer, PaymentSerializer
-
-
-### Helper Functions for Consistent Responses ###
-def success_response(data, message="Success", status_code=status.HTTP_200_OK):
-    return Response({
-        "success": True,
-        "message": message,
-        "data": data
-    }, status=status_code)
-
-
-def error_response(message="Error", details=None, status_code=status.HTTP_400_BAD_REQUEST):
-    return Response({
-        "success": False,
-        "message": message,
-        "details": details
-    }, status=status_code)
-
-
-class CustomPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-    def paginate_queryset(self, queryset, request, view=None):
-        if not queryset.ordered:
-            queryset = queryset.order_by('-created_at')
-        return super().paginate_queryset(queryset, request, view)
 
 
 class OrderViewSet(viewsets.ViewSet):

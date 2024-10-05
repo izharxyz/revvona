@@ -2,11 +2,12 @@ from rest_framework import serializers
 
 from accounts.serializers import AddressSerializer
 from products.serializers import ProductSerializer
+from revvona.utils import CustomSerializer
 
 from .models import Order, OrderItem, Payment
 
 
-class OrderItemSerializer(serializers.ModelSerializer):
+class OrderItemSerializer(CustomSerializer):
     product = ProductSerializer(read_only=True)
 
     class Meta:
@@ -14,7 +15,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'product', 'quantity']
 
 
-class OrderSerializer(serializers.ModelSerializer):
+class OrderSerializer(CustomSerializer):
     shipping_address = AddressSerializer(read_only=True)
     billing_address = AddressSerializer(read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
@@ -27,7 +28,7 @@ class OrderSerializer(serializers.ModelSerializer):
                             'status', 'created_at', 'updated_at']
 
 
-class PaymentSerializer(serializers.ModelSerializer):
+class PaymentSerializer(CustomSerializer):
     class Meta:
         model = Payment
         fields = ['id', 'order', 'method', 'amount', 'razorpay_order_id', 'razorpay_payment_id',
