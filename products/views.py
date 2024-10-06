@@ -1,42 +1,11 @@
-from django.db.models import QuerySet
 from rest_framework import status, viewsets
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
+
+from revvona.utils import CustomPagination, error_response, success_response
 
 from .models import Category, Product, Review
-from .serializers import (CategorySerializer, ProductSerializer,
-                          ReviewSerializer)
-
-
-### Helper Functions for Consistent Responses ###
-def success_response(data, message="Success", status_code=status.HTTP_200_OK):
-    return Response({
-        "success": True,
-        "message": message,
-        "data": data
-    }, status=status_code)
-
-
-def error_response(message="Error", details=None, status_code=status.HTTP_400_BAD_REQUEST):
-    return Response({
-        "success": False,
-        "message": message,
-        "details": details
-    }, status=status_code)
-
-
-# Pagination Class
-class CustomPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-    def paginate_queryset(self, queryset: QuerySet, request, view=None):
-        if queryset.ordered is False:
-            queryset = queryset.order_by('-created_at')
-
-        return super().paginate_queryset(queryset, request, view)
+from .serializers import (CategorySerializer, ProductDetailSerializer,
+                          ProductSerializer, ReviewSerializer)
 
 
 # Product ViewSet
@@ -64,10 +33,10 @@ class ProductViewSet(viewsets.ViewSet):
         except Exception as e:
             return error_response("An error occurred while listing products.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def retrieve_product(self, request, pk=None):
+    def retrieve_product(self, request, slug=None):
         try:
-            product = Product.objects.get(pk=pk)
-            serializer = ProductSerializer(product)
+            product = Product.objects.get(slug=slug)
+            serializer = ProductDetailSerializer(product)
             return success_response(serializer.data)
         except Product.DoesNotExist:
             return error_response("Product not found.", status_code=status.HTTP_404_NOT_FOUND)
@@ -87,9 +56,9 @@ class ReviewViewSet(viewsets.ViewSet):
             self.permission_classes = [AllowAny]
         return super().get_permissions()
 
-    def list_reviews(self, request, product_id=None):
+    def list_reviews(self, request, product_slug=None):
         try:
-            product = Product.objects.get(pk=product_id)
+            product = Product.objects.get(slug=product_slug)
             queryset = Review.objects.filter(
                 product=product).order_by('-created_at')
             paginator = CustomPagination()
@@ -108,9 +77,9 @@ class ReviewViewSet(viewsets.ViewSet):
         except Exception as e:
             return error_response("An error occurred while listing reviews.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def create_review(self, request, product_id=None):
+    def create_review(self, request, product_slug=None):
         try:
-            product = Product.objects.get(id=product_id)
+            product = Product.objects.get(slug=product_slug)
 
             rating = request.data.get('rating')
             if not rating:
