@@ -6,15 +6,15 @@ urlpatterns = [
     # Product Management
     path('products/',
          views.ProductViewSet.as_view({'get': 'list_products'}), name="product-list"),
-    path('products/<int:pk>/',
+    path('products/<slug:slug>/',
          views.ProductViewSet.as_view({'get': 'retrieve_product'}), name="product-detail"),
 
     # Product Reviews
-    path('products/<int:product_id>/reviews/',
+    path('products/<slug:product_slug>/reviews/',
          views.ReviewViewSet.as_view({'get': 'list_reviews'}), name="review-list"),
 
     # Review Management
-    path('products/<int:product_id>/reviews/create/',
+    path('products/<slug:product_slug>/reviews/create/',
          views.ReviewViewSet.as_view({'post': 'create_review'}), name="review-create"),
     path('reviews/<int:pk>/',
          views.ReviewViewSet.as_view({'get': 'retrieve_review'}), name="review-detail"),
