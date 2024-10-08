@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import validate_email
@@ -25,42 +26,57 @@ class UserAuthViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
     def get_permissions(self):
-        if self.action == 'logout_user':
+        if self.action == 'logout_user' or self.action == 'change_password':
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
 
     def register_user(self, request, *args, **kwargs):
         try:
+            # Check if the user is already logged in
             if request.user.is_authenticated:
                 return error_response("User already logged in.", "You are already logged in.", status_code=status.HTTP_403_FORBIDDEN)
 
             data = request.data
-            username = data.get("username", "")
-            email = data.get("email", "")
+            username = data.get("username", "").strip()
+            email = data.get("email", "").strip()
 
+            # Ensure both username and email are provided
             if not username or not email:
-                return error_response("Username or email cannot be empty.", status_code=status.HTTP_400_BAD_REQUEST)
+                return error_response("Username and email cannot be empty.", status_code=status.HTTP_400_BAD_REQUEST)
 
+            # Check if username already exists
             if User.objects.filter(username=username).exists():
                 return error_response("A user with that username already exists!", status_code=status.HTTP_403_FORBIDDEN)
 
+            # Check if email already exists
             if User.objects.filter(email=email).exists():
                 return error_response("A user with that email address already exists!", status_code=status.HTTP_403_FORBIDDEN)
 
+            # Create the user with is_active=False for email verification
             user = User.objects.create(
                 username=username,
                 email=email,
                 password=make_password(data.get("password")),
-                is_active=False  # Set is_active to False initially for email verification
+                is_active=False
             )
 
             # Send verification email
             self.send_verification_email(user)
 
-            return success_response({"user": user.id}, "User registered successfully. Please verify your email to activate your account.", status_code=status.HTTP_201_CREATED)
+            # Return success response
+            return success_response(
+                {"user": user.id},
+                "User registered successfully. Please verify your email to activate your account.",
+                status_code=status.HTTP_201_CREATED
+            )
 
         except Exception as e:
-            return error_response("An error occurred while registering the user.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Handle any unexpected errors gracefully
+            return error_response(
+                "An error occurred while registering the user.",
+                str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def send_verification_email(self, user):
         """Send a verification email to the user with a frontend-based verification link."""
@@ -71,7 +87,8 @@ class UserAuthViewSet(viewsets.ViewSet):
 
         subject = "Verify Your Email Address"
         html_message = render_to_string('verification_email.html', {
-            'token': frontend_url
+            'token': frontend_url,
+            'frontend_url': frontend_url
         })
 
         send_mail(
@@ -199,6 +216,46 @@ class UserAuthViewSet(viewsets.ViewSet):
         except Exception as e:
             return error_response("An error occurred during logout.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def change_password(self, request, *args, **kwargs):
+        try:
+            user = request.user
+
+            # Extract passwords from request data
+            curr_password = request.data.get("curr_password")
+            new_password = request.data.get("new_password")
+
+            # Ensure all required fields are provided
+            if not curr_password or not new_password:
+                return error_response("Current password and new password are required.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Check if current password is correct
+            if not user.check_password(curr_password):
+                return error_response("Current password is incorrect.", status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Validate the new password using Django's built-in password validators
+            try:
+                validate_password(new_password, user=user)
+            except ValidationError as e:
+                return error_response("Password validation error.", str(e), status_code=status.HTTP_400_BAD_REQUEST)
+
+            # Set and save the new password
+            user.set_password(new_password)
+            user.save(update_fields=['password'])
+
+            # Optionally, log the user out of all sessions by invalidating tokens (JWT)
+            # refresh_token = request.data.get("refresh_token")
+            # if refresh_token:
+            #     try:
+            #         token = RefreshToken(refresh_token)
+            #         token.blacklist()
+            #     except Exception:
+            #         pass  # Handle errors if needed
+
+            return success_response({}, "Password updated successfully.", status_code=status.HTTP_200_OK)
+
+        except Exception as e:
+            return error_response("An error occurred while changing the password.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class ProfileViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
@@ -218,16 +275,25 @@ class ProfileViewSet(viewsets.ViewSet):
             user = request.user
             data = request.data
 
+            # Get the new email from the request data
+            new_email = data.get("email", user.email)
+
+            # Check if the new email is already taken by another user
+            if new_email != user.email and User.objects.filter(email=new_email).exists():
+                return error_response("This email is already in use by another account.", status_code=status.HTTP_400_BAD_REQUEST)
+
             # Update the user's username, email, first_name, and last_name
             user.username = data.get("username", user.username)
-            user.email = data.get("email", user.email)
+            user.email = new_email
             user.first_name = data.get("first_name", user.first_name)
             user.last_name = data.get("last_name", user.last_name)
 
             user.save()
 
+            # Serialize the updated user data
             serializer = ProfileSerializer(user)
             return success_response(serializer.data, "User successfully updated.", status.HTTP_200_OK)
+
         except User.DoesNotExist:
             return error_response("User not found.", status.HTTP_404_NOT_FOUND)
         except Exception as e:
