@@ -14,6 +14,8 @@ urlpatterns = [
         {'post': 'refresh_token'}), name="token-refresh"),
     path('logout/',
          views.UserAuthViewSet.as_view({'post': 'logout_user'}), name="logout"),
+    path('password/change/', views.UserAuthViewSet.as_view(
+        {'patch': 'change_password'}), name="change-password"),
 
     # User Profile Management (via ProfileViewSet)
     path('profile/',
