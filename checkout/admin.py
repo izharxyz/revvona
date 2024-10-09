@@ -11,7 +11,7 @@ class OrderItemInline(TabularInline):
 
 
 class OrderAdmin(ModelAdmin):
-    list_display = ('id', 'user', 'total_price', 'shipping_address',
+    list_display = ('id', 'user', 'total_price', 'delivery_charge', 'shipping_address',
                     'billing_address', 'status', 'created_at', 'updated_at')
     list_filter = ('status', 'created_at', 'updated_at')
     search_fields = ('user__username', 'shipping_address__street',
@@ -21,7 +21,7 @@ class OrderAdmin(ModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('user', 'total_price', 'shipping_address', 'billing_address', 'status')
+            'fields': ('user', 'total_price', 'delivery_charge', 'shipping_address', 'billing_address', 'status')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')
