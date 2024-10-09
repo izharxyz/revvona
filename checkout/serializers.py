@@ -1,5 +1,3 @@
-from rest_framework import serializers
-
 from accounts.serializers import AddressSerializer
 from products.serializers import ProductSerializer
 from revvona.utils import CustomSerializer
@@ -12,7 +10,7 @@ class OrderItemSerializer(CustomSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'quantity']
+        fields = ['id', 'product', 'quantity', 'discounted_price']
 
 
 class OrderSerializer(CustomSerializer):
@@ -23,7 +21,7 @@ class OrderSerializer(CustomSerializer):
     class Meta:
         model = Order
         fields = ['id', 'user', 'shipping_address', 'billing_address',
-                  'items', 'total_price', 'status', 'created_at', 'updated_at']
+                  'items', 'total_price', 'delivery_charge', 'status', 'created_at', 'updated_at']
         read_only_fields = ['total_price',
                             'status', 'created_at', 'updated_at']
 
