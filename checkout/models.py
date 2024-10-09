@@ -19,6 +19,8 @@ class Order(models.Model):
     # this will be calculated using signals so it can be null
     total_price = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True)
+    delivery_charge = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0)
     shipping_address = models.ForeignKey(
         Address, on_delete=models.SET_NULL, null=True, related_name='shipping_orders')
     billing_address = models.ForeignKey(
@@ -37,6 +39,8 @@ class OrderItem(models.Model):
         Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey('products.Product', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+    discounted_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} (Order {self.order.id})"
