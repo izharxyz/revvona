@@ -1,9 +1,7 @@
 import razorpay
 from django.conf import settings
 from rest_framework import status, viewsets
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from accounts.models import Address
 from cart.models import CartItem
@@ -34,29 +32,48 @@ class OrderViewSet(viewsets.ViewSet):
             except Address.DoesNotExist:
                 return error_response("Invalid address", status_code=status.HTTP_400_BAD_REQUEST)
 
-            total_price = sum(item.product.price *
-                              item.quantity for item in cart_items)
+            total_price = 0
 
             # Create the order
             order = Order.objects.create(
                 user=user,
                 shipping_address=shipping_address,
                 billing_address=billing_address,
-                total_price=total_price,
+                total_price=0,  # Will be updated after calculating total
+                delivery_charge=0,  # Default delivery charge
             )
 
-            # Create order items
+            # Create order items and calculate total price with discount
             for item in cart_items:
+                product_price = item.product.price
+                discount = item.product.discount or 0  # Default to 0 if no discount
+                discounted_price = product_price - \
+                    (product_price * discount / 100)
+
+                total_price += discounted_price * item.quantity
+
                 OrderItem.objects.create(
                     order=order,
                     product=item.product,
                     quantity=item.quantity,
+                    discounted_price=discounted_price
                 )
+
+            delivery_charge = 50
+            if total_price >= 499:
+                delivery_charge = 0
+
+            # Update the total price of the order
+            total_price += delivery_charge  # Add delivery charge
+            order.delivery_charge = delivery_charge
+            order.total_price += total_price
+            order.save()
 
             cart_items.delete()  # Clear cart after order creation
 
             serializer = OrderSerializer(order)
             return success_response(serializer.data, "Order created successfully", status_code=status.HTTP_201_CREATED)
+
         except Exception as e:
             return error_response("An error occurred while creating the order.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
