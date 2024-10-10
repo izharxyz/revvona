@@ -9,7 +9,15 @@
     </div>
     <div class="border-t border-gray-300 dark:border-gray-800 px-4 py-2 text-sm text-gray-400 flex items-center justify-between">
         <div>
-            {% if increment >= 0 %}+{% else %}-{% endif %}{{ increment }}% increase from last week
+            {% if increment >= 0 %}
+                <span class="text-green-500">
+                    +{{ increment }}% increase from last week
+                </span>
+            {% else %}
+                <span class="text-red-500">
+                    {{ increment }}% decrease from last week
+                </span>
+            {% endif %}
         </div>
         <div class="text-right">
            Total {{ object }}: <span class="font-semibold">{{ total_value }}</span>
