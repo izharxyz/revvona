@@ -152,7 +152,7 @@ def get_new_customers(now):
     return {
         'name': 'Customers',
         'value': current_customers,
-        'increment': increment,
+        'increment': round(increment, 2),
         # Total customers excluding staff
         'total_value': User.objects.filter(is_staff=False).count()
     }
@@ -172,7 +172,7 @@ def get_new_products(now):
     return {
         'name': 'Products',
         'value': current_products,
-        'increment': increment,
+        'increment': round(increment, 2),
         'total_value': Product.objects.count()  # Total products
     }
 
@@ -191,7 +191,7 @@ def get_new_categories(now):
     return {
         'name': 'Categories',
         'value': current_categories,
-        'increment': increment,
+        'increment': round(increment, 2),
         'total_value': Category.objects.count()  # Total categories
     }
 
