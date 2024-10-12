@@ -15,7 +15,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('ENV') != 'PROD'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',') or []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',') or [
+    'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'unfold',
@@ -187,21 +188,30 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASS')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 EMAIL_USE_TLS = True
 
-FRONTEND_URL = os.getenv('FRONTEND_URL')
+# Frontend and Brand settings
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+BRAND_NAME = os.getenv('BRAND_NAME', 'REVVONA')
 
+# unfold settings
+# These settings are frontend dependent and should be adjusted based on your frontend
 UNFOLD = {
-    "SITE_TITLE": _("REVVONA ADMIN"),
-    "SITE_HEADER": _("REVVONA ADMINISTRATION"),
-    # "SITE_URL": "/",
-    "SITE_ICON": lambda request: static("icon.png"),
-    "SITE_LOGO": lambda request: static("logo.png"),
+    "SITE_TITLE": _(f"{BRAND_NAME} ADMIN"),
+    "SITE_HEADER": _(f"{BRAND_NAME} ADMINISTRATION"),
+    "SITE_URL": FRONTEND_URL,
+    "SITE_ICON": f"{FRONTEND_URL}/favicon.ico",
+
+    "SITE_LOGO": {
+        "light": f"{FRONTEND_URL}/logo.png",
+        "dark": f"{FRONTEND_URL}/logo-dark.png",
+    },
+
     "SITE_SYMBOL": "grass",
     "SITE_FAVICONS": [
         {
             "rel": "icon",
             "sizes": "32x32",
             "type": "image/png",
-            "href": lambda request: static("favicon.png"),
+            "href": f"{FRONTEND_URL}/favicon.ico",
         },
     ],
     "SHOW_HISTORY": True,
