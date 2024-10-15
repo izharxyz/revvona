@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'cart',
     'checkout',
     'dashboard',
+    'about',
 ]
 
 MIDDLEWARE = [
@@ -247,6 +248,7 @@ UNFOLD = {
         "show_search": True,
         "show_all_applications": False,
         "navigation": [
+            # Supported icon set: https://fonts.google.com/icons
             {
                 "title": _("Product Management"),
                 "separator": True,
@@ -308,6 +310,32 @@ UNFOLD = {
                         "title": _("Payments"),
                         "icon": "payment",
                         "link": reverse_lazy("admin:checkout_payment_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Legal and Branding"),
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _(f"About {BRAND_NAME.capitalize()}"),
+                        "icon": "info",
+                        "link": reverse_lazy("admin:about_about_changelist"),
+                    },
+                    {
+                        "title": _("Legal Documents"),
+                        "icon": "gavel",
+                        "link": reverse_lazy("admin:about_legal_changelist"),
+                    },
+                    {
+                        "title": _("Socials"),
+                        "icon": "thumb_up",
+                        "link": reverse_lazy("admin:about_instagram_changelist"),
+                    },
+                    {
+                        "title": _("Testimonials"),
+                        "icon": "star",
+                        "link": reverse_lazy("admin:about_testimonial_changelist"),
                     },
                 ],
             }
