@@ -12,6 +12,8 @@ urlpatterns = [
          views.LegalViewSet.as_view({'get': 'get_terms_and_conditions'}), name="terms-and-conditions"),
     path('legal/privacy-policy/',
          views.LegalViewSet.as_view({'get': 'get_privacy_policy'}), name="privacy-policy"),
+    path('legal/cancellation-policy/',
+         views.LegalViewSet.as_view({'get': 'get_cancellation_policy'}), name="cancellation-policy"),
     path('legal/return-policy/',
          views.LegalViewSet.as_view({'get': 'get_return_policy'}), name="return-policy"),
     path('legal/disclaimer/',

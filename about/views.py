@@ -44,6 +44,9 @@ class LegalViewSet(viewsets.ViewSet):
     def get_privacy_policy(self, request):
         return self.get_legal_field(request, 'privacy_policy')
 
+    def get_cancellation_policy(self, request):
+        return self.get_legal_field(request, 'cancellation_policy')
+
     def get_return_policy(self, request):
         return self.get_legal_field(request, 'return_policy')
 

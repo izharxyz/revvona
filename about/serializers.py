@@ -47,7 +47,7 @@ class AboutSerializer(serializers.ModelSerializer):
 class LegalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Legal
-        fields = ['terms_and_conditions', 'privacy_policy', 'return_policy', 'disclaimer', 'shipping_policy',
+        fields = ['terms_and_conditions', 'privacy_policy', 'cancellation_policy', 'return_policy', 'disclaimer', 'shipping_policy',
                   'payment_policy', 'cookie_policy', 'razorpay_compliance', 'created_at', 'updated_at']
 
 # Serializer for Testimonial

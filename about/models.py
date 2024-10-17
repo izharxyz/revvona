@@ -54,6 +54,8 @@ class Legal(models.Model):
     terms_and_conditions = models.TextField(
         validators=[MinLengthValidator(500)])
     privacy_policy = models.TextField(validators=[MinLengthValidator(500)])
+    cancellation_policy = models.TextField(
+        validators=[MinLengthValidator(500)], null=True, blank=True)
     return_policy = models.TextField(
         validators=[MinLengthValidator(500)], null=True, blank=True)
 
