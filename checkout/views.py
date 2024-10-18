@@ -1,5 +1,8 @@
 import razorpay
 from django.conf import settings
+from django.core.mail import send_mail
+from django.db.models import F
+from django.template.loader import render_to_string
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 
@@ -206,14 +209,26 @@ class PaymentViewSet(viewsets.ViewSet):
 
             amount = order.total_price
 
+            # Handling COD payment
             if payment_method == 'cod':
                 payment = Payment.objects.create(
-                    order=order, method='cod', amount=amount)
+                    order=order, method='cod', amount=amount
+                )
                 order.status = 'confirmed'
                 order.save()
+
+                # Decrement stock for each ordered item
+                for item in order.items.all():
+                    item.product.stock = F('stock') - item.quantity
+                    item.product.save()
+
+                # Send confirmation email
+                self.send_order_confirmation_email(user, order, payment)
+
                 serializer = PaymentSerializer(payment)
                 return success_response(serializer.data, "Payment created successfully", status_code=status.HTTP_201_CREATED)
 
+            # Handling Razorpay payment
             elif payment_method == 'razorpay':
                 client = razorpay.Client(
                     auth=(settings.RAZORPAY_API_KEY, settings.RAZORPAY_API_SECRET))
@@ -238,8 +253,32 @@ class PaymentViewSet(viewsets.ViewSet):
                 }, "Razorpay payment initiated", status_code=status.HTTP_201_CREATED)
 
             return error_response("Invalid payment method", status_code=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             return error_response("An error occurred while creating the payment.", str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Helper function to send order confirmation email
+    def send_order_confirmation_email(self, user, order, payment):
+        items = order.items.all()
+        subject = f"Order Confirmation - Order #{order.id}"
+        recipient = user.email
+
+        # Prepare HTML content with order and payment details
+        html_content = render_to_string("emails/order_confirmation.html", {
+            "user": user,
+            "order": order,
+            "payment": payment,
+            "items": items,
+        })
+
+        # Send the email
+        send_mail(
+            subject,
+            message="Your order has been confirmed. Here are the details.",
+            from_email="no-reply@agavi.com",
+            recipient_list=[recipient],
+            html_message=html_content,
+        )
 
     def verify_payment(self, request):
         try:

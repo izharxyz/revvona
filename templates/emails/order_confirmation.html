@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order Confirmation</title>
+    <style>
+      /* General styles */
+      body { font-family: Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 0; }
+      .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; }
+      .header, .footer { text-align: center; padding: 24px; background-color: #1f2937; color: #ffffff; }
+      .content { padding: 24px; }
+      .content h1 { font-size: 24px; color: #000000; }
+      .content p { font-size: 16px; color: #4b5563; margin-bottom: 16px; }
+      .order-summary { width: 100%; margin-top: 24px; border-collapse: collapse; }
+      .order-summary th, .order-summary td { padding: 12px; border: 1px solid #e5e7eb; text-align: left; }
+      .order-summary th { background-color: #f9fafb; }
+      .highlight { color: #3b82f6; font-weight: bold; }
+      .button { background-color: #3b82f6; color: #ffffff; padding: 10px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 24px; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Your Order Confirmation</h1>
+    </div>
+    <div class="container">
+      <div class="content">
+        <h1>Thank you for your order, {{ user.username }}!</h1>
+        <p>Your order ID is <span class="highlight">{{ order.id }}</span> and has been successfully placed.</p>
+        <p><strong>Payment Method:</strong> {{ payment.method|title }}</p>
+        <p><strong>Status:</strong> {{ order.status|title }}</p>
+
+        <!-- Order Items Table -->
+        <table class="order-summary">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in order.items.all %}
+            <tr>
+              <td>{{ item.product.name }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>₹{{ item.product.price }}</td>
+              <td>₹{{ item.quantity|multiply:item.product.price }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align: right;"><strong>Total:</strong></td>
+              <td>₹{{ order.total_price }}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Confirmation Note -->
+        <p>If you have any questions about your order, feel free to <a href="mailto:support@yourcompany.com" class="highlight">contact us</a>.</p>
+        <a href="https://agavi.in/user/orders" class="button">View Your Order</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>&copy; {{ current_year }} AGAVI. All rights reserved.</p>
+    </div>
+  </body>
+</html>
