@@ -86,7 +86,7 @@ class UserAuthViewSet(viewsets.ViewSet):
             settings.FRONTEND_URL}/verify?uid={token}&token={token}"
 
         subject = "Verify Your Email Address"
-        html_message = render_to_string('verification_email.html', {
+        html_message = render_to_string('emails/account_verification.html', {
             'token': frontend_url,
             'frontend_url': frontend_url
         })

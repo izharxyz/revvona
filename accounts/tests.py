@@ -29,8 +29,7 @@ class EmailAppearanceTest(SimpleTestCase):
             'email': 'test_user@django.drf'
         }
 
-        # Render the email content from the verification_email.html template
-        html_message = render_to_string('verification_email.html', {
+        html_message = render_to_string('emails/account_verification.html', {
             'user': user,
             'token': token,
             'frontend_url': "https://agavi.in"
