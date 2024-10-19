@@ -46,7 +46,7 @@
               <td>{{ item.product.name }}</td>
               <td>{{ item.quantity }}</td>
               <td>₹{{ item.product.price }}</td>
-              <td>₹{{ item.quantity|multiply:item.product.price }}</td>
+              <td>₹{{ item.item_total }}</td>
             </tr>
             {% endfor %}
           </tbody>

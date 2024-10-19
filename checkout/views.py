@@ -261,7 +261,10 @@ class PaymentViewSet(viewsets.ViewSet):
     def send_order_confirmation_email(self, user, order, payment):
         items = order.items.all()
         subject = f"Order Confirmation - Order #{order.id}"
-        recipient = user.email
+
+        for item in items:
+            item.item_total = round(item.quantity * item.product.price, 2)
+            print(item.item_total)
 
         # Prepare HTML content with order and payment details
         html_content = render_to_string("emails/order_confirmation.html", {
@@ -274,9 +277,9 @@ class PaymentViewSet(viewsets.ViewSet):
         # Send the email
         send_mail(
             subject,
-            message="Your order has been confirmed. Here are the details.",
-            from_email="no-reply@agavi.com",
-            recipient_list=[recipient],
+            "",
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
             html_message=html_content,
         )
 
