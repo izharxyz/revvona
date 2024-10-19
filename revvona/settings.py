@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlparse
 
 from django.templatetags.static import static
 from django.urls import reverse_lazy
@@ -80,17 +81,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'revvona.wsgi.application'
 
+POSTGRES_URL = urlparse(os.getenv("DATABASE_URL"))
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django_cockroachdb',
-        'NAME': os.getenv('COCKROACH_DB_NAME'),
-        'USER': os.getenv('COCKROACH_DB_USER'),
-        'PASSWORD': os.getenv('COCKROACH_DB_PASS'),
-        'HOST': os.getenv('COCKROACH_DB_HOST'),
-        'PORT': os.getenv('COCKROACH_DB_PORT'),
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': POSTGRES_URL.path.replace('/', ''),
+        'USER': POSTGRES_URL.username,
+        'PASSWORD': POSTGRES_URL.password,
+        'HOST': POSTGRES_URL.hostname,
+        'PORT': 5432,
     }
 }
 
