@@ -3,32 +3,118 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Order Confirmation</title>
+    <title>Thank you for shopping with us</title>
     <style>
-      /* General styles */
-      body { font-family: Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 0; }
-      .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; }
-      .header, .footer { text-align: center; padding: 24px; background-color: #1f2937; color: #ffffff; }
-      .content { padding: 24px; }
-      .content h1 { font-size: 24px; color: #000000; }
-      .content p { font-size: 16px; color: #4b5563; margin-bottom: 16px; }
-      .order-summary { width: 100%; margin-top: 24px; border-collapse: collapse; }
-      .order-summary th, .order-summary td { padding: 12px; border: 1px solid #e5e7eb; text-align: left; }
-      .order-summary th { background-color: #f9fafb; }
-      .highlight { color: #3b82f6; font-weight: bold; }
-      .button { background-color: #3b82f6; color: #ffffff; padding: 10px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 24px; }
+      /* General Styles */
+      body {
+        width: 100dvw;
+        overflow-x: hidden;
+        font-family: Arial, sans-serif;
+        background-color: #f9fafb;
+        margin: 0;
+        padding: 0;
+        color: #374151;
+      }
+
+      /* Dark Mode Styles */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #030712;
+          color: #d1d5db;
+        }
+        .container, .order-summary th, .order-summary tfoot th {
+          background-color: #030712;
+        }
+        .content h1, .order-summary th, .order-summary tfoot th {
+          color: #f9fafb;
+        }
+      }
+
+      /* Layout */
+      .container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 10px;
+        background-color: #ffffff;
+      }
+
+      .header, .footer {
+        width: 100%;
+        padding: 10px;
+        background-color: #1f2937;
+        color: #ffffff;
+        text-align: center;
+        box-sizing: border-box;
+      }
+
+      /* Content */
+      .content h1 {
+        font-size: 24px;
+        color: #030712;
+      }
+
+      .content p {
+        font-size: 16px;
+        color: #374151;
+        margin-bottom: 16px;
+      }
+
+      /* Highlight Text */
+      .highlight {
+        color: #4d7c0f;
+        font-weight: bold;
+      }
+
+      /* Order Summary Table */
+      .order-summary {
+        width: 100%;
+        border-collapse: collapse;
+        overflow-x: scroll;
+      }
+
+      .order-summary th,
+      .order-summary td {
+        padding: 10px;
+        border: 1px solid #e5e7eb;
+        text-align: left;
+      }
+
+      .order-summary th {
+        background-color: #f9fafb;
+        color: #030712;
+      }
+
+      .order-summary tfoot th {
+        background-color: #f9fafb;
+        color: #030712;
+      }
+
+      /* Button */
+      .button {
+        background-color: #4d7c0f;
+        color: #ffffff;
+        padding: 10px 24px;
+        text-decoration: none;
+        border-radius: 0;
+        display: inline-block;
+        margin-top: 24px;
+      }
     </style>
   </head>
   <body>
     <div class="header">
-      <h1>Your Order Confirmation</h1>
+      <h1>Your Order has been confirmed</h1>
     </div>
     <div class="container">
       <div class="content">
         <h1>Thank you for your order, {{ user.username }}!</h1>
         <p>Your order ID is <span class="highlight">{{ order.id }}</span> and has been successfully placed.</p>
-        <p><strong>Payment Method:</strong> {{ payment.method|title }}</p>
-        <p><strong>Status:</strong> {{ order.status|title }}</p>
+        
+        <!-- Display Order and Payment Status -->
+        <p><strong>Order Status:</strong> {{ order.status|title }}</p>
+        <p><strong>Payment Status:</strong> {{ payment.payment_status|title }}</p>
+        
 
         <!-- Order Items Table -->
         <table class="order-summary">
@@ -41,16 +127,22 @@
             </tr>
           </thead>
           <tbody>
-            {% for item in order.items.all %}
+            {% for item in items %}
             <tr>
               <td>{{ item.product.name }}</td>
               <td>{{ item.quantity }}</td>
-              <td>₹{{ item.product.price }}</td>
+              <td>₹{{ item.discounted_price }}</td>
               <td>₹{{ item.item_total }}</td>
             </tr>
             {% endfor %}
           </tbody>
           <tfoot>
+            {% if order.delivery_charge %}
+              <tr>
+                <td colspan="3" style="text-align: right;"><strong>Delivery Charge:</strong></td>
+                <td>₹{{ order.delivery_charge }}</td>
+              </tr>
+            {% endif %}
             <tr>
               <td colspan="3" style="text-align: right;"><strong>Total:</strong></td>
               <td>₹{{ order.total_price }}</td>
@@ -59,6 +151,10 @@
         </table>
 
         <!-- Confirmation Note -->
+        {% if payment.payment_status == 'pending' %}
+          <p class="highlight">Note: Please complete payment of ₹{{ payment.amount }}.</p>
+        {% endif %}
+
         <p>If you have any questions about your order, feel free to <a href="mailto:support@yourcompany.com" class="highlight">contact us</a>.</p>
         <a href="https://agavi.in/user/orders" class="button">View Your Order</a>
       </div>
