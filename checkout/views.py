@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models import F
 from django.template.loader import render_to_string
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 
@@ -263,8 +264,12 @@ class PaymentViewSet(viewsets.ViewSet):
         subject = f"Order Confirmation - Order #{order.id}"
 
         for item in items:
-            item.item_total = round(item.quantity * item.product.price, 2)
-            print(item.item_total)
+            discount = item.product.discount or 0
+            item.discounted_price = round(
+                item.product.price - (item.product.price * discount / 100), 2)
+            item.item_total = round(item.quantity * item.discounted_price, 2)
+
+        print("payment status", payment.status)
 
         # Prepare HTML content with order and payment details
         html_content = render_to_string("emails/order_confirmation.html", {
@@ -272,6 +277,36 @@ class PaymentViewSet(viewsets.ViewSet):
             "order": order,
             "payment": payment,
             "items": items,
+            "current_year": timezone.now().year,
+        })
+
+        # Send the email
+        send_mail(
+            subject,
+            "",
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_content,
+        )
+
+    # Helper function to send order confirmation email
+    def send_order_confirmation_email(self, user, order, payment):
+        items = order.items.all()
+        subject = f"Order Confirmation - Order #{order.id}"
+
+        for item in items:
+            discount = item.product.discount or 0
+            item.discounted_price = round(
+                item.product.price - (item.product.price * discount / 100), 2)
+            item.item_total = round(item.quantity * item.discounted_price, 2)
+
+        # Prepare HTML content with order and payment details
+        html_content = render_to_string("emails/order_confirmation.html", {
+            "user": user,
+            "order": order,
+            "payment": payment,
+            "items": items,
+            "current_year": timezone.now().year,
         })
 
         # Send the email
